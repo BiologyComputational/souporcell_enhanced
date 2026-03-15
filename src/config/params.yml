@@ -1,0 +1,223 @@
+name: souporcell
+version: "3.0.0"
+author: Haynes Heaton <whheaton@gmail.com>
+about: >
+  scRNA-seq mixed-genotype demultiplexing via EM/KHM clustering.
+  Enhanced by Jahidul Arafat: modular rewrite, structured logging, reproducible seeding.
+args:
+    - ref_matrix:
+        long: ref_matrix
+        short: r
+        takes_value: true
+        required: false
+        help: "ref allele count matrix from vartrix (MatrixMarket .mtx format). Can also be set via --config JSON, .souporcell.env (SOUPC_REF_MATRIX), without specifying on CLI."
+    - alt_matrix:
+        long: alt_matrix
+        short: a
+        takes_value: true
+        required: false
+        help: "alt allele count matrix from vartrix (MatrixMarket .mtx format). Can also be set via --config JSON or SOUPC_ALT_MATRIX in .env."
+    - barcodes:
+        long: barcodes
+        short: b
+        takes_value: true
+        required: false
+        help: "cell barcodes file (one per line, .gz supported). Can also be set via --config JSON or SOUPC_BARCODES in .env."
+    - num_clusters:
+        long: num_clusters
+        short: k
+        takes_value: true
+        required: false
+        help: "number of donor clusters (must be >= 2). Can also be set via --config JSON or SOUPC_NUM_CLUSTERS in .env."
+    - min_alt:
+        long: min_alt
+        takes_value: true
+        required: false
+        help: "minimum number of cells with alt allele for a locus to be used [default: 4]"
+    - min_ref:
+        long: min_ref
+        takes_value: true
+        required: false
+        help: "minimum number of cells with ref allele for a locus to be used [default: 4]"
+    - min_alt_umis:
+        long: min_alt_umis
+        takes_value: true
+        required: false
+        help: "minimum total alt UMIs across all cells for a locus to be used [default: 0]"
+    - min_ref_umis:
+        long: min_ref_umis
+        takes_value: true
+        required: false
+        help: "minimum total ref UMIs across all cells for a locus to be used [default: 0]"
+    - restarts:
+        long: restarts
+        takes_value: true
+        required: false
+        help: "number of random EM/KHM restarts (more = more likely to find global optimum) [default: 100]"
+    - threads:
+        long: threads
+        short: t
+        takes_value: true
+        required: false
+        help: "number of parallel threads for restarts [default: 1]"
+    - seed:
+        long: seed
+        takes_value: true
+        required: false
+        help: "random seed for reproducibility (u64, [default: 4])"
+    - clustering_method:
+        long: clustering_method
+        short: m
+        takes_value: true
+        required: false
+        help: "clustering algorithm: em (expectation-maximisation) or khm (k-harmonic means) [default: em]"
+    - initialization_strategy:
+        long: initialization_strategy
+        takes_value: true
+        required: false
+        help: "cluster init strategy: random_uniform | random_cell_assignment [default: random_uniform]"
+    - known_genotypes:
+        long: known_genotypes
+        short: g
+        takes_value: true
+        required: false
+        help: "population VCF/BCF of known donor genotypes (optional, overrides random init)"
+    - known_genotypes_sample_names:
+        long: known_genotypes_sample_names
+        takes_value: true
+        multiple: true
+        required: false
+        help: "sample names in the known_genotypes VCF corresponding to each cluster"
+    - known_cell_assignments:
+        long: known_cell_assignments
+        takes_value: true
+        required: false
+        help: "TSV with barcodes and their known cluster assignments (not yet implemented)"
+    - souporcell3:
+        long: souporcell3
+        short: s
+        takes_value: true
+        required: false
+        help: "enable bad-cluster detection and multi-pass reinitialization (souporcell3 mode) [default: false]"
+    # ── Logging / verbosity ────────────────────────────────────────────────────
+    - verbose:
+        long: verbose
+        short: v
+        required: false
+        takes_value: false
+        help: "emit per-iteration CONV lines to stderr (can produce large logs for restarts=100)"
+    - progress_interval:
+        long: progress_interval
+        takes_value: true
+        required: false
+        help: "print a progress line every N cells during inner loops (0 = suppress) [default: 500]"
+    # ── Diagnostics / plots ────────────────────────────────────────────────────
+    - plot_dir:
+        long: plot_dir
+        takes_value: true
+        required: false
+        help: "write SVG diagnostic plots to this directory (default: disabled). Use 'souporcell_plots' to enable all plots in ./souporcell_plots/"
+    - plots:
+        long: plots
+        takes_value: true
+        required: false
+        help: "comma-separated list of plots to generate, or 'all' / 'none'. Options: restart,convergence,annealing,balance,confidence,threads [default: all when --plot_dir is set]"
+    # ── Cleanup ───────────────────────────────────────────────────────────────
+    - cleanup:
+        long: cleanup
+        required: false
+        takes_value: false
+        help: "remove intermediate files after a successful run (retains only clusters_tmp.tsv, SVG plots, and the HTML report)"
+    # ── Configuration file / env file overrides ───────────────────────────────
+    - config:
+        long: config
+        takes_value: true
+        required: false
+        help: "path to a JSON config profile (sets any/all params; CLI flags override). Example: --config experiments/k4_donors.json"
+    - env:
+        long: env
+        takes_value: true
+        required: false
+        help: "path to a .souporcell.env file (auto-discovered in CWD or ~ if omitted). Example: --env /data/project.env"
+    # ── Annealing schedule ────────────────────────────────────────────────────
+    - anneal_steps:
+        long: anneal_steps
+        takes_value: true
+        required: false
+        help: "number of simulated annealing temperature steps (default: 9)"
+    - anneal_base_em:
+        long: anneal_base_em
+        takes_value: true
+        required: false
+        help: "EM temperature divisor base: raw_temp = total_alleles / (base × 2^step) (default: 20.0)"
+    - anneal_base_khm:
+        long: anneal_base_khm
+        takes_value: true
+        required: false
+        help: "KHM temperature divisor base (default: 0.5)"
+    # ── EM / KHM convergence ─────────────────────────────────────────────────
+    - conv_tol:
+        long: conv_tol
+        takes_value: true
+        required: false
+        help: "convergence tolerance: stop when |Δ loss| < tol × n_cells (default: 0.01)"
+    - max_iter:
+        long: max_iter
+        takes_value: true
+        required: false
+        help: "maximum EM/KHM iterations per temperature step (default: 1000)"
+    - min_cluster_cells:
+        long: min_cluster_cells
+        takes_value: true
+        required: false
+        help: "minimum cells for a cluster to count as populated in verbose logs (default: 200)"
+    # ── M-step pseudocounts ───────────────────────────────────────────────────
+    - pseudocount_alt:
+        long: pseudocount_alt
+        takes_value: true
+        required: false
+        help: "Laplace pseudocount added to alt-allele numerator in M-step (default: 1.0)"
+    - pseudocount_total:
+        long: pseudocount_total
+        takes_value: true
+        required: false
+        help: "Laplace pseudocount added to total-allele denominator in M-step (default: 2.0)"
+    # ── Allele-frequency bounds ───────────────────────────────────────────────
+    - theta_min:
+        long: theta_min
+        takes_value: true
+        required: false
+        help: "lower bound for allele frequency θ after M-step (default: 0.01)"
+    - theta_max:
+        long: theta_max
+        takes_value: true
+        required: false
+        help: "upper bound for allele frequency θ after M-step (default: 0.99)"
+    # ── KHM-specific ──────────────────────────────────────────────────────────
+    - khm_p:
+        long: khm_p
+        takes_value: true
+        required: false
+        help: "KHM harmonic-mean exponent p — higher = more peaked around nearest centre (default: 25.0)"
+    # ── Pre-flight / dry-run ──────────────────────────────────────────────────
+    - dry_run:
+        long: dry_run
+        required: false
+        takes_value: false
+        help: "print the full run plan (inputs, pipeline stages, algorithm hyperparameters, expected output and interpretation) and prompt for [Y/n] approval before running anything. Nothing is read or written until approved."
+    - dry_run_yes:
+        long: dry_run_yes
+        required: false
+        takes_value: false
+        help: "requires --dry_run. Print the plan and proceed automatically without prompting. For CI pipelines. Also set via SOUPC_DRY_RUN_YES=true in .env."
+    # ── GUI server ────────────────────────────────────────────────────────────
+    - gui:
+        long: gui
+        required: false
+        takes_value: false
+        help: "launch the web GUI on http://localhost:7979 — configure and run souporcell from a browser. All other flags are ignored when --gui is set."
+    - gui_port:
+        long: gui_port
+        takes_value: true
+        required: false
+        help: "port for the GUI server (default: 7979). Use with --gui."

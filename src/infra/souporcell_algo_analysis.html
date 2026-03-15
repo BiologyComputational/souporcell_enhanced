@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>souporcell v3.0.0 — Algorithm Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05080F;--surface:#090D18;--surface2:#0D1220;--surface3:#111828;
+  --border:#1A2538;--border2:#1E2E44;
+  --violet:#7C5CEF;--violet-dim:#4F3A9E;--violet-glow:rgba(124,92,239,.13);
+  --cyan:#22D3EE;--cyan-glow:rgba(34,211,238,.1);
+  --amber:#F0A500;--amber-glow:rgba(240,165,0,.1);
+  --green:#22C55E;--green-glow:rgba(34,197,94,.1);
+  --red:#EF4444;--red-glow:rgba(239,68,68,.1);
+  --pink:#F472B6;
+  --ink:#E8EEF8;--ink2:#A8B8CC;--ink3:#607080;--ink4:#3A4A5C;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-serif:'Crimson Pro',Georgia,serif;
+  --font-ui:'Sora',sans-serif;
+  --r:6px;--r-lg:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);
+     font-size:14px;line-height:1.65;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(124,92,239,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(124,92,239,.025) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0}
+
+/* ── Layout ── */
+.wrap{display:flex;gap:0;position:relative;z-index:1}
+.sidebar{width:240px;flex-shrink:0;position:sticky;top:0;height:100vh;
+         overflow-y:auto;border-right:1px solid var(--border);
+         padding:24px 0;background:var(--surface)}
+.main{flex:1;padding:40px 5vw 100px;min-width:0}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* ── Sidebar ── */
+.sb-brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.sb-logo{font-family:var(--font-mono);font-size:12px;font-weight:600;
+         color:var(--violet);line-height:1.4}
+.sb-sub{font-size:10px;color:var(--ink4);margin-top:2px}
+.sb-section{margin-bottom:4px}
+.sb-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.15em;
+          text-transform:uppercase;color:var(--ink4);padding:8px 20px 4px}
+.sb-link{display:flex;align-items:center;gap:8px;padding:5px 20px;
+         font-size:11px;color:var(--ink3);text-decoration:none;
+         border-left:2px solid transparent;transition:all .15s;cursor:pointer}
+.sb-link:hover{color:var(--ink);background:var(--surface2)}
+.sb-link.active{color:var(--violet);border-left-color:var(--violet);background:var(--violet-glow)}
+.sb-num{font-family:var(--font-mono);font-size:9px;color:var(--ink4);
+        min-width:18px;text-align:right}
+
+/* ── Doc header ── */
+.doc-header{margin-bottom:56px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+.doc-tags{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.doc-tag{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;
+         font-family:var(--font-mono);letter-spacing:.06em;
+         background:var(--violet-glow);border:1px solid var(--violet-dim);color:var(--violet)}
+.doc-tag2{padding:3px 10px;border-radius:20px;font-size:10px;font-family:var(--font-mono);
+          border:1px solid var(--border2);color:var(--ink3)}
+.doc-h1{font-family:var(--font-serif);font-size:2.4rem;font-weight:600;
+        color:var(--ink);line-height:1.25;margin-bottom:12px}
+.doc-h1 em{color:var(--violet);font-style:italic}
+.doc-lead{font-family:var(--font-serif);font-size:1.1rem;color:var(--ink2);
+          font-weight:300;line-height:1.7;margin-bottom:20px}
+.doc-meta{display:flex;gap:20px;flex-wrap:wrap}
+.doc-meta-item{font-family:var(--font-mono);font-size:10px;color:var(--ink4)}
+.doc-meta-item span{color:var(--cyan)}
+
+/* ── Section ── */
+.section{margin-bottom:72px;opacity:0;transform:translateY(18px);
+         transition:opacity .6s ease, transform .6s ease}
+.section.visible{opacity:1;transform:none}
+.sec-num{font-family:var(--font-mono);font-size:10px;color:var(--violet);
+         letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+h2.sec-title{font-family:var(--font-serif);font-size:1.65rem;font-weight:600;
+             color:var(--ink);margin-bottom:6px;line-height:1.3}
+.sec-desc{font-family:var(--font-serif);font-size:1rem;color:var(--ink3);
+          font-weight:300;margin-bottom:24px;line-height:1.6;}
+h3.subsec{font-family:var(--font-serif);font-size:1.15rem;font-weight:600;
+          color:var(--ink);margin:28px 0 10px}
+h3.subsec::before{content:'§ ';color:var(--violet);font-style:italic}
+.body-text{font-family:var(--font-serif);font-size:1rem;color:var(--ink2);
+           line-height:1.75;margin-bottom:16px;max-width:720px}
+.body-text strong{color:var(--ink);font-weight:600}
+.body-text code{font-family:var(--font-mono);font-size:.85em;
+                background:var(--surface2);padding:1px 5px;border-radius:3px;
+                color:var(--cyan)}
+
+/* ── Complexity badge ── */
+.O{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;
+   font-family:var(--font-mono);font-size:11px;font-weight:600}
+.O-1   {background:var(--green-glow); color:var(--green)}
+.O-lin {background:var(--cyan-glow);  color:var(--cyan)}
+.O-nk  {background:var(--violet-glow);color:var(--violet)}
+.O-quad{background:var(--amber-glow); color:var(--amber)}
+.O-exp {background:var(--red-glow);   color:var(--red)}
+
+/* ── Animated Step-by-step explainer ── */
+.steps-wrap{margin:24px 0;border:1px solid var(--border2);border-radius:var(--r-lg);
+            overflow:hidden;background:var(--surface)}
+.steps-header{display:flex;align-items:center;justify-content:space-between;
+              padding:14px 18px;border-bottom:1px solid var(--border);
+              background:var(--surface2)}
+.steps-title{font-family:var(--font-mono);font-size:11px;font-weight:600;
+             color:var(--violet);letter-spacing:.08em}
+.steps-counter{font-family:var(--font-mono);font-size:10px;color:var(--ink4)}
+.steps-body{position:relative;min-height:160px}
+.step-panel{position:absolute;inset:0;padding:22px 24px;opacity:0;
+            transform:translateX(30px);transition:all .4s cubic-bezier(.4,0,.2,1);
+            pointer-events:none}
+.step-panel.active{opacity:1;transform:none;position:relative;pointer-events:auto}
+.step-panel.exit{opacity:0;transform:translateX(-30px)}
+.step-why{font-family:var(--font-mono);font-size:9px;letter-spacing:.15em;
+          text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.step-what{font-size:1rem;font-family:var(--font-serif);font-weight:600;
+           color:var(--ink);margin-bottom:10px}
+.step-how{font-size:.95rem;font-family:var(--font-serif);color:var(--ink2);
+          line-height:1.7;margin-bottom:14px}
+.step-formula{background:var(--surface3);border-left:3px solid var(--violet);
+              padding:12px 16px;border-radius:0 var(--r) var(--r) 0;
+              font-family:var(--font-mono);font-size:12px;line-height:1.9;
+              color:var(--ink2);margin-bottom:12px}
+.step-formula .sym{color:var(--cyan)}
+.step-formula .val{color:var(--green)}
+.step-formula .cmt{color:var(--ink4);font-style:italic}
+.step-insight{display:flex;gap:10px;padding:10px 14px;background:var(--violet-glow);
+              border-radius:var(--r);border:1px solid var(--violet-dim);
+              font-size:.9rem;font-family:var(--font-serif);color:var(--ink2)}
+.step-insight::before{content:'💡';flex-shrink:0;font-size:16px}
+.steps-nav{display:flex;align-items:center;gap:8px;padding:12px 18px;
+           border-top:1px solid var(--border);background:var(--surface2)}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);
+          cursor:pointer;transition:all .2s;flex-shrink:0}
+.step-dot.active{background:var(--violet);transform:scale(1.3)}
+.step-dot:hover{background:var(--violet-dim)}
+.steps-nav-btns{display:flex;gap:6px;margin-left:auto}
+.step-btn{padding:5px 14px;border-radius:var(--r);font-size:11px;font-weight:600;
+          font-family:var(--font-ui);cursor:pointer;border:1px solid var(--border2);
+          background:transparent;color:var(--ink3);transition:all .15s}
+.step-btn:hover{border-color:var(--violet);color:var(--violet)}
+.step-btn:disabled{opacity:.3;cursor:not-allowed}
+.step-btn.play{background:var(--violet);color:#fff;border-color:var(--violet)}
+.step-btn.play:hover{background:var(--violet-dim)}
+
+/* ── Animated formula reveal ── */
+.formula-reveal{background:var(--surface2);border:1px solid var(--border2);
+                border-radius:var(--r-lg);padding:20px 24px;margin:20px 0;
+                font-family:var(--font-mono);font-size:12.5px;line-height:2.1}
+.f-line{display:flex;align-items:baseline;gap:10px;overflow:hidden}
+.f-line .f-term{opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease}
+.f-line .f-term.revealed{opacity:1;transform:none}
+.f-sym{color:var(--cyan);font-weight:600}
+.f-eq{color:var(--ink4)}
+.f-val{color:var(--green)}
+.f-cmt{color:var(--ink4);font-size:11px;font-style:italic;margin-left:8px}
+.f-trigger{display:inline-flex;align-items:center;gap:6px;margin-top:10px;
+           padding:5px 12px;background:transparent;border:1px solid var(--border2);
+           border-radius:var(--r);color:var(--ink3);font-size:11px;
+           font-family:var(--font-ui);cursor:pointer;transition:all .15s}
+.f-trigger:hover{border-color:var(--violet);color:var(--violet)}
+
+/* ── Visual diagram ── */
+.diagram{margin:24px 0;padding:24px;background:var(--surface2);
+         border:1px solid var(--border2);border-radius:var(--r-lg)}
+.diagram-title{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;
+               text-transform:uppercase;color:var(--ink4);margin-bottom:16px}
+
+/* Pipeline flow */
+.pipeline-flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;row-gap:12px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:6px;
+            opacity:0;transform:scale(.85);
+            transition:opacity .4s ease,transform .4s ease}
+.pipe-stage.show{opacity:1;transform:scale(1)}
+.pipe-box{padding:8px 14px;border-radius:var(--r);font-size:11px;
+          font-family:var(--font-mono);font-weight:600;text-align:center;
+          border:1px solid;min-width:90px}
+.pipe-box.io   {background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.3);color:var(--cyan)}
+.pipe-box.proc {background:rgba(124,92,239,.1); border-color:rgba(124,92,239,.3);color:var(--violet)}
+.pipe-box.hot  {background:rgba(240,165,0,.1);  border-color:rgba(240,165,0,.3); color:var(--amber)}
+.pipe-box.out  {background:rgba(34,197,94,.08); border-color:rgba(34,197,94,.3); color:var(--green)}
+.pipe-cplx{font-family:var(--font-mono);font-size:9px;color:var(--ink4)}
+.pipe-arrow{font-size:18px;color:var(--border2);padding:0 4px;align-self:center;
+            margin-bottom:14px}
+
+/* EM animation canvas */
+.em-viz{background:var(--surface3);border-radius:var(--r-lg);overflow:hidden;
+        position:relative;margin:20px 0}
+.em-viz canvas{display:block;width:100%;height:220px}
+.em-controls{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--border);
+             align-items:center;flex-wrap:wrap}
+.em-controls .step-btn{font-size:10px;padding:4px 12px}
+.em-stat{font-family:var(--font-mono);font-size:10px;color:var(--ink3);margin-left:auto}
+.em-stat span{color:var(--cyan)}
+
+/* Annealing temp viz */
+.anneal-bars{display:flex;align-items:flex-end;gap:4px;height:140px;
+             padding:8px;background:var(--surface3);border-radius:var(--r)}
+.a-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.a-bar{width:100%;border-radius:3px 3px 0 0;transition:height .5s cubic-bezier(.4,0,.2,1),
+       background .5s ease;min-height:3px}
+.a-bar-label{font-family:var(--font-mono);font-size:8px;color:var(--ink4)}
+
+/* Sparsity viz */
+.sparse-grid{display:grid;gap:2px;margin:12px 0}
+.sparse-cell{width:100%;aspect-ratio:1;border-radius:2px;
+             transition:background .3s ease, transform .2s ease}
+.sparse-cell.nz{background:var(--cyan);transform:scale(1.1)}
+.sparse-cell.z {background:var(--surface3)}
+
+/* Convergence chart */
+.conv-chart{position:relative;height:120px;background:var(--surface3);
+            border-radius:var(--r);overflow:hidden;margin:16px 0}
+.conv-chart svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* Table */
+.tbl-wrap{margin:20px 0;overflow-x:auto;border-radius:var(--r-lg);
+          border:1px solid var(--border2)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead tr{background:var(--surface2)}
+th{padding:10px 14px;text-align:left;font-family:var(--font-mono);font-size:10px;
+   letter-spacing:.07em;color:var(--ink3);font-weight:500;
+   border-bottom:1px solid var(--border2)}
+td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--ink2);
+   font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+td.mono{font-family:var(--font-mono);font-size:11px;color:var(--ink)}
+td.note{color:var(--ink3);font-size:11px}
+td.hi{color:var(--green);font-family:var(--font-mono);font-size:11px}
+
+/* Callout */
+.callout{margin:20px 0;padding:14px 18px;border-radius:var(--r-lg);
+         border-left:3px solid;font-size:.95rem;font-family:var(--font-serif);
+         color:var(--ink2);line-height:1.65}
+.callout-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;
+               text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.callout.info  {background:var(--cyan-glow);  border-color:var(--cyan);  }
+.callout.info   .callout-label{color:var(--cyan)}
+.callout.warn  {background:var(--amber-glow); border-color:var(--amber); }
+.callout.warn   .callout-label{color:var(--amber)}
+.callout.good  {background:var(--green-glow); border-color:var(--green); }
+.callout.good   .callout-label{color:var(--green)}
+.callout.insight{background:var(--violet-glow);border-color:var(--violet);}
+.callout.insight .callout-label{color:var(--violet)}
+
+/* Progress bar */
+.prog-bar-wrap{margin:8px 0}
+.prog-label{display:flex;justify-content:space-between;font-size:11px;
+            font-family:var(--font-mono);color:var(--ink3);margin-bottom:4px}
+.prog-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;width:0;
+           transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+/* ── Scroll-reveal ── */
+.reveal{opacity:0;transform:translateY(16px);
+        transition:opacity .55s ease,transform .55s ease}
+.reveal.visible{opacity:1;transform:none}
+
+/* ── Responsive ── */
+@media(max-width:800px){
+  .sidebar{display:none}
+  .main{padding:24px 20px 60px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<!-- ── SIDEBAR ── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">souporcell<br/><span id="sb-ver" class="ver" style="color:var(--ink3)">v3.0.0</span></div>
+    <div class="sb-sub">Algorithm Analysis</div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label">Foundations</div>
+    <a class="sb-link" onclick="scrollToSection('s1')"><span class="sb-num">§1</span>Notation</a>
+    <a class="sb-link" onclick="scrollToSection('s2')"><span class="sb-num">§2</span>Pipeline Overview</a>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label">Data Layer</div>
+    <a class="sb-link" onclick="scrollToSection('s3')"><span class="sb-num">§3</span>Matrix Loading</a>
+    <a class="sb-link" onclick="scrollToSection('s4')"><span class="sb-num">§4</span>Locus QC Filter</a>
+    <a class="sb-link" onclick="scrollToSection('s5')"><span class="sb-num">§5</span>Cluster Init</a>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label">Algorithms</div>
+    <a class="sb-link" onclick="scrollToSection('s6')"><span class="sb-num">§6</span>Annealing Schedule</a>
+    <a class="sb-link" onclick="scrollToSection('s7')"><span class="sb-num">§7</span>EM Algorithm</a>
+    <a class="sb-link" onclick="scrollToSection('s8')"><span class="sb-num">§8</span>E-step Deep Dive</a>
+    <a class="sb-link" onclick="scrollToSection('s9')"><span class="sb-num">§9</span>M-step Deep Dive</a>
+    <a class="sb-link" onclick="scrollToSection('s10')"><span class="sb-num">§10</span>KHM Algorithm</a>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label">System</div>
+    <a class="sb-link" onclick="scrollToSection('s11')"><span class="sb-num">§11</span>Parallel Framework</a>
+    <a class="sb-link" onclick="scrollToSection('s12')"><span class="sb-num">§12</span>Math Primitives</a>
+    <a class="sb-link" onclick="scrollToSection('s13')"><span class="sb-num">§13</span>Memory Model</a>
+    <a class="sb-link" onclick="scrollToSection('s14')"><span class="sb-num">§14</span>Full Complexity</a>
+    <a class="sb-link" onclick="scrollToSection('s15')"><span class="sb-num">§15</span>Optimisation Map</a>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+<!-- Header -->
+<div class="doc-header reveal">
+  <div class="doc-tags">
+    <span class="doc-tag">Technical Report</span>
+    <span class="doc-tag2">souporcell <span class="ver">v3.0.0</span> · Algorithm Analysis</span>
+    <span class="doc-tag2">Jahidul Arafat</span>
+  </div>
+  <h1 class="doc-h1">Computational Complexity Analysis<br/>of <em>souporcell</em> <span class="ver">v3.0.0</span></h1>
+  <p class="doc-lead">A rigorous step-by-step walkthrough of every algorithmic stage —
+  why each design decision was made, what the algorithm computes, how it does so,
+  and what the complexity cost is.</p>
+  <div class="doc-meta">
+    <div class="doc-meta-item">Version <span class="ver">v3.0.0</span></div>
+    <div class="doc-meta-item">Original · <span>Heaton et al., Nature Methods 2020</span></div>
+    <div class="doc-meta-item">Enhanced rewrite · <span>Jahidul Arafat</span></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §1 NOTATION ═══════════════════ -->
+<div class="section reveal" id="s1">
+  <div class="sec-num">§ 1</div>
+  <h2 class="sec-title">Notation & Variable Definitions</h2>
+  <p class="sec-desc">Every complexity expression in this document uses standard Big-O notation over the following variables. Click each bar to reveal its meaning.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Variable Legend — click to expand</div>
+    <div id="legend-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table>
+      <thead><tr><th>Variable</th><th>Meaning</th><th>Typical v2.4</th><th>Configurable in v3.0</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">N</td><td>Cell barcodes</td><td class="mono">500 – 10,000</td><td class="note">Input-dependent</td></tr>
+        <tr><td class="mono">L₀</td><td>Raw SNP loci in matrix</td><td class="mono">10,000 – 200,000</td><td class="note">Input-dependent</td></tr>
+        <tr><td class="mono">L</td><td>Loci passing QC (L ≪ L₀)</td><td class="mono">500 – 20,000</td><td class="note">min_ref, min_alt filters</td></tr>
+        <tr><td class="mono">D</td><td>Mean covered loci per cell (sparse)</td><td class="mono">10 – 200</td><td class="note">Dataset sparsity</td></tr>
+        <tr><td class="mono">K</td><td>Donor clusters</td><td class="mono">2 – 16</td><td class="note">--num_clusters (2–64)</td></tr>
+        <tr><td class="mono">R</td><td>Random restarts</td><td class="mono">100</td><td class="note">--restarts</td></tr>
+        <tr><td class="mono">T</td><td>Parallel threads</td><td class="mono">1</td><td class="note">--threads</td></tr>
+        <tr><td class="mono">S</td><td>Annealing temperature steps</td><td class="mono">9 (hardcoded)</td><td class="note">--anneal_steps</td></tr>
+        <tr><td class="mono">I</td><td>EM/KHM iterations per temp step</td><td class="mono">5 – 30</td><td class="note">--max_iter, --conv_tol</td></tr>
+        <tr><td class="mono">p</td><td>KHM harmonic exponent</td><td class="mono">25 (hardcoded)</td><td class="note">--khm_p (1–200)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §2 PIPELINE ═══════════════════ -->
+<div class="section reveal" id="s2">
+  <div class="sec-num">§ 2</div>
+  <h2 class="sec-title">Pipeline Overview</h2>
+  <p class="sec-desc">The complete execution path from input files to output TSV. Each stage is animated below — click Play to walk through them.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Animated pipeline — 10 stages</div>
+    <div id="pipeline-flow" class="pipeline-flow"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="step-btn play" onclick="animatePipeline()">▶ Animate</button>
+      <button class="step-btn" onclick="resetPipeline()">↺ Reset</button>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink4)" id="pipe-status"></span>
+    </div>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table>
+      <thead><tr><th>#</th><th>Stage</th><th>Time</th><th>Dominance</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">1</td><td>Load barcodes</td><td><span class="O O-lin">O(N)</span></td><td class="note">Negligible</td></tr>
+        <tr><td class="mono">2</td><td>Matrix loading — pass 1</td><td><span class="O O-lin">O(N·D)</span></td><td class="note">Fast — I/O bound</td></tr>
+        <tr><td class="mono">3</td><td>Locus QC filter</td><td><span class="O O-lin">O(L₀)</span></td><td class="note">Negligible</td></tr>
+        <tr><td class="mono">4</td><td>Matrix loading — pass 2</td><td><span class="O O-lin">O(N·D)</span></td><td class="note">Fast — I/O bound</td></tr>
+        <tr><td class="mono">5</td><td>Cluster centre init</td><td><span class="O O-lin">O(K·L)</span></td><td class="note">Negligible vs clustering</td></tr>
+        <tr><td class="mono">6</td><td><strong>EM/KHM parallel restarts</strong></td><td><span class="O O-quad">O(R·S·I·N·D·K / T)</span></td><td class="note" style="color:var(--amber)">⚠ Dominates 95–99% of runtime</td></tr>
+        <tr><td class="mono">7</td><td>Global best selection</td><td><span class="O O-lin">O(T·N·K)</span></td><td class="note">Negligible</td></tr>
+        <tr><td class="mono">8</td><td>Cell assignment</td><td><span class="O O-lin">O(N·K)</span></td><td class="note">Negligible</td></tr>
+        <tr><td class="mono">9</td><td>Write TSV</td><td><span class="O O-lin">O(N)</span></td><td class="note">I/O bound</td></tr>
+        <tr><td class="mono">10</td><td>SVG plots + HTML report</td><td><span class="O O-1">O(1)</span></td><td class="note">Template-based, constant</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §3 MATRIX LOADING ═══════════════════ -->
+<div class="section reveal" id="s3">
+  <div class="sec-num">§ 3</div>
+  <h2 class="sec-title">Matrix Loading — Two-Pass Sparse Reader</h2>
+  <p class="sec-desc">Why two passes? What does each pass do? How does sparsity reduce cost?</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Two-Pass Loading — Step by Step</span>
+      <span class="steps-counter" id="load-ctr">Step 1 of 5</span>
+    </div>
+    <div class="steps-body" id="load-steps"></div>
+    <div class="steps-nav" id="load-nav"></div>
+  </div>
+
+  <h3 class="subsec">Sparsity Visualisation</h3>
+  <p class="body-text">Only ~3–8% of (cell, locus) pairs have any reads. The sparse <code>CellData</code> structure stores only these non-zero entries — giving a 10–100× speedup over a dense implementation.</p>
+  <div class="diagram">
+    <div class="diagram-title" style="margin-bottom:12px">N=60 cells × L=120 loci — each column = one locus, each row = one cell · <span style="color:var(--cyan)">teal = covered</span></div>
+    <canvas id="sparse-canvas" style="width:100%;border-radius:6px;display:block;cursor:crosshair" height="300"></canvas>
+    <div style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;font-family:var(--font-mono);font-size:11px;color:var(--ink4)">
+      <span><span style="color:var(--cyan)">■</span> Non-zero (alt or ref reads)</span>
+      <span><span style="color:#1A2538)">■</span> Zero coverage</span>
+      <span id="sparse-stat" style="color:var(--amber)"></span>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="f-trigger" onclick="buildSparse()">↺ New matrix</button>
+      <label style="font-family:var(--font-mono);font-size:10px;color:var(--ink3)">
+        Density: <span id="sparse-dens-val" style="color:var(--cyan)">5%</span>
+      </label>
+      <input type="range" id="sparse-dens" min="2" max="25" value="5" style="width:120px"
+             oninput="document.getElementById('sparse-dens-val').textContent=this.value+'%';buildSparse()"/>
+    </div>
+  </div>
+
+  <div class="callout insight reveal">
+    <div class="callout-label">Key design insight</div>
+    D ≈ 10–200 covered loci per cell vs L ≈ 500–20,000 total QC-passing loci.
+    The sparse CellData struct stores only covered loci — giving a
+    <strong style="color:var(--green)">10–100× speedup</strong> over a dense O(N·L·K) implementation
+    with identical mathematical results.
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §4 LOCUS QC ═══════════════════ -->
+<div class="section reveal" id="s4">
+  <div class="sec-num">§ 4</div>
+  <h2 class="sec-title">Locus QC Filter</h2>
+  <p class="sec-desc">Four independent thresholds prune uninformative SNP loci before any clustering begins. Animated below.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ QC Filter Logic — Step by Step</span>
+      <span class="steps-counter" id="qc-ctr">Step 1 of 4</span>
+    </div>
+    <div class="steps-body" id="qc-steps"></div>
+    <div class="steps-nav" id="qc-nav"></div>
+  </div>
+
+  <h3 class="subsec">Filter Impact — Typical Values</h3>
+  <div id="qc-bars" class="reveal" style="margin:16px 0"></div>
+</div>
+
+
+<!-- ═══════════════════ §5 CLUSTER INIT ═══════════════════ -->
+<div class="section reveal" id="s5">
+  <div class="sec-num">§ 5</div>
+  <h2 class="sec-title">Cluster Initialisation Strategies</h2>
+  <p class="sec-desc">The quality of the starting θ matrix directly controls how many restarts are needed to find the global optimum.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Init Strategies Compared</span>
+      <span class="steps-counter" id="init-ctr">Step 1 of 3</span>
+    </div>
+    <div class="steps-body" id="init-steps"></div>
+    <div class="steps-nav" id="init-nav"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §6 ANNEALING ═══════════════════ -->
+<div class="section reveal" id="s6">
+  <div class="sec-num">§ 6</div>
+  <h2 class="sec-title">Simulated Annealing Schedule</h2>
+  <p class="sec-desc">Why does the algorithm start "hot" and cool down? This section explains the deterministic cooling schedule that prevents convergence to local optima.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Annealing — Why, What, How, When</span>
+      <span class="steps-counter" id="ann-ctr">Step 1 of 5</span>
+    </div>
+    <div class="steps-body" id="ann-steps"></div>
+    <div class="steps-nav" id="ann-nav"></div>
+  </div>
+
+  <h3 class="subsec">Temperature vs Step (live)</h3>
+  <p class="body-text">Change <code>anneal_base_em</code> below to see how it shifts the cooling curve for a typical cell with 100 total alleles.</p>
+  <div class="diagram">
+    <div class="diagram-title">τ = total_alleles / (base × 2^step) — drag slider to tune</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <label style="font-family:var(--font-mono);font-size:11px;color:var(--ink3)">base_em:</label>
+      <input type="range" id="anneal-base" min="5" max="80" value="20" style="flex:1"
+             oninput="drawAnnealCurve()"/>
+      <span id="anneal-base-val" style="font-family:var(--font-mono);font-size:11px;
+            color:var(--cyan);min-width:24px">20</span>
+    </div>
+    <div class="anneal-bars" id="anneal-bars"></div>
+    <div id="anneal-labels" style="display:flex;gap:6px;margin-top:6px;
+         font-family:var(--font-mono);font-size:9px;color:var(--ink4)"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §7 EM ALGORITHM ═══════════════════ -->
+<div class="section reveal" id="s7">
+  <div class="sec-num">§ 7</div>
+  <h2 class="sec-title">Expectation-Maximisation (EM) Algorithm</h2>
+  <p class="sec-desc">EM iterates between two steps until convergence. Each iteration the E-step soft-assigns cells to clusters; the M-step refines the cluster allele frequency estimates.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Full EM Loop — Why, What, How, When</span>
+      <span class="steps-counter" id="em-ctr">Step 1 of 6</span>
+    </div>
+    <div class="steps-body" id="em-steps"></div>
+    <div class="steps-nav" id="em-nav"></div>
+  </div>
+
+  <h3 class="subsec">Live EM Simulation</h3>
+  <p class="body-text">Watch cells (dots) move toward their correct cluster centres as EM iterates. Colour = assigned cluster. Click Run to start.</p>
+  <div class="em-viz">
+    <canvas id="em-canvas" style="width:100%;display:block" height="320"></canvas>
+    <div class="em-controls">
+      <button class="step-btn play" id="em-run-btn" onclick="runEMSim()">▶ Run EM</button>
+      <button class="step-btn" onclick="resetEMSim()">↺ Reset</button>
+      <button class="step-btn" onclick="stepEMSim()">Step →</button>
+      <span class="em-stat">Iter: <span id="em-iter-stat">0</span> &nbsp; Loss: <span id="em-loss-stat">—</span></span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §8 E-STEP ═══════════════════ -->
+<div class="section reveal" id="s8">
+  <div class="sec-num">§ 8</div>
+  <h2 class="sec-title">E-step Deep Dive — Posterior Computation</h2>
+  <p class="sec-desc">The E-step is the heart of EM. For every cell, it asks: "given the current θ estimates, what is the probability this cell belongs to each cluster?"</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ E-step Formula — Revealed Term by Term</span>
+      <span class="steps-counter" id="estep-ctr">Step 1 of 5</span>
+    </div>
+    <div class="steps-body" id="estep-steps"></div>
+    <div class="steps-nav" id="estep-nav"></div>
+  </div>
+
+  <div class="callout warn reveal">
+    <div class="callout-label">Hot path</div>
+    <code>binomial_loss_with_min_index</code> is called <strong>N × S × I × (R/T)</strong> times per thread.
+    For N=5000, S=9, I=15, R=100, T=8: <strong style="color:var(--amber)">≈ 84 million calls</strong>,
+    each looping over D≈50 loci × K=4 clusters. This single function accounts for &gt;80% of total runtime.
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §9 M-STEP ═══════════════════ -->
+<div class="section reveal" id="s9">
+  <div class="sec-num">§ 9</div>
+  <h2 class="sec-title">M-step Deep Dive — Allele Frequency Update</h2>
+  <p class="sec-desc">The M-step updates the θ allele frequency matrix using the soft assignments from the E-step. Pseudocounts prevent numerical singularities.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ M-step Formula — Term by Term</span>
+      <span class="steps-counter" id="mstep-ctr">Step 1 of 4</span>
+    </div>
+    <div class="steps-body" id="mstep-steps"></div>
+    <div class="steps-nav" id="mstep-nav"></div>
+  </div>
+
+  <h3 class="subsec">Pseudocount Effect — Interactive</h3>
+  <p class="body-text">Drag the sliders to see how pseudocounts prevent θ from collapsing to 0 or 1.</p>
+  <div class="diagram">
+    <div class="diagram-title">θ update with Laplace smoothing</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
+      <div>
+        <label style="font-family:var(--font-mono);font-size:10px;color:var(--ink3)">
+          Raw alt counts (Σ p·alt): <span id="ps-alt-raw" style="color:var(--cyan)">8</span></label>
+        <input type="range" id="ps-alt" min="0" max="50" value="8"
+               style="width:100%;margin-top:4px" oninput="updatePseudo()"/>
+      </div>
+      <div>
+        <label style="font-family:var(--font-mono);font-size:10px;color:var(--ink3)">
+          Raw total counts (Σ p·total): <span id="ps-tot-raw" style="color:var(--cyan)">20</span></label>
+        <input type="range" id="ps-tot" min="1" max="100" value="20"
+               style="width:100%;margin-top:4px" oninput="updatePseudo()"/>
+      </div>
+    </div>
+    <div id="ps-result" style="font-family:var(--font-mono);font-size:12px;
+         background:var(--surface3);padding:12px 16px;border-radius:var(--r);line-height:2"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §10 KHM ═══════════════════ -->
+<div class="section reveal" id="s10">
+  <div class="sec-num">§ 10</div>
+  <h2 class="sec-title">K-Harmonic Means (KHM) Algorithm</h2>
+  <p class="sec-desc">KHM replaces the EM softmax with a harmonic-mean membership function that is more robust to poor initialisations — at the cost of formal convergence guarantees.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ KHM vs EM — Side by Side</span>
+      <span class="steps-counter" id="khm-ctr">Step 1 of 4</span>
+    </div>
+    <div class="steps-body" id="khm-steps"></div>
+    <div class="steps-nav" id="khm-nav"></div>
+  </div>
+
+  <h3 class="subsec">KHM Exponent p — Effect on Membership Sharpness</h3>
+  <div class="diagram">
+    <div class="diagram-title">w_nk = (1/d_nk)^p / Σ(1/d_nj)^p — drag p slider</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <label style="font-family:var(--font-mono);font-size:11px;color:var(--ink3)">khm_p:</label>
+      <input type="range" id="khm-p" min="1" max="100" value="25" style="flex:1"
+             oninput="drawKHM()"/>
+      <span id="khm-p-val" style="font-family:var(--font-mono);font-size:11px;
+            color:var(--amber);min-width:30px">25</span>
+    </div>
+    <canvas id="khm-canvas" style="width:100%;display:block;border-radius:var(--r)" height="180"></canvas>
+    <div id="khm-interp" style="font-family:var(--font-serif);font-size:.9rem;
+         color:var(--ink3);margin-top:8px"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §11 PARALLEL ═══════════════════ -->
+<div class="section reveal" id="s11">
+  <div class="sec-num">§ 11</div>
+  <h2 class="sec-title">Parallel Restart Framework</h2>
+  <p class="sec-desc">Restarts are embarrassingly parallel — no communication during clustering. Rayon distributes ⌈R/T⌉ restarts per thread with work-stealing.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Parallelism — Why, What, How, When</span>
+      <span class="steps-counter" id="par-ctr">Step 1 of 4</span>
+    </div>
+    <div class="steps-body" id="par-steps"></div>
+    <div class="steps-nav" id="par-nav"></div>
+  </div>
+
+  <h3 class="subsec">Amdahl Speedup — Interactive</h3>
+  <div class="diagram">
+    <div class="diagram-title">Theoretical speedup vs threads (serial fraction ≈ 2%)</div>
+    <canvas id="amdahl-canvas" style="width:100%;display:block;border-radius:var(--r)" height="200"></canvas>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <label style="font-family:var(--font-mono);font-size:10px;color:var(--ink3)">Threads:</label>
+      <input type="range" id="amdahl-t" min="1" max="32" value="8" style="flex:1"
+             oninput="drawAmdahl()"/>
+      <span id="amdahl-val" style="font-family:var(--font-mono);font-size:11px;
+            color:var(--cyan);min-width:60px">T=8</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §12 MATH PRIMITIVES ═══════════════════ -->
+<div class="section reveal" id="s12">
+  <div class="sec-num">§ 12</div>
+  <h2 class="sec-title">Mathematical Primitives</h2>
+  <p class="sec-desc">Four hot-path functions called billions of times across a typical run. Each is analysed for complexity, numerical stability, and optimisation opportunity.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Hot-path Functions — One by One</span>
+      <span class="steps-counter" id="prim-ctr">Step 1 of 4</span>
+    </div>
+    <div class="steps-body" id="prim-steps"></div>
+    <div class="steps-nav" id="prim-nav"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §13 MEMORY ═══════════════════ -->
+<div class="section reveal" id="s13">
+  <div class="sec-num">§ 13</div>
+  <h2 class="sec-title">Memory Model</h2>
+  <div class="tbl-wrap reveal">
+    <table>
+      <thead><tr><th>Structure</th><th>Size</th><th>Lifetime</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">ref.mtx + alt.mtx (raw)</td><td class="mono">O(N·D)</td><td class="note">Load only</td><td class="note">Streamed; not retained after CellData is built</td></tr>
+        <tr><td class="mono">CellData Vec&lt;CellData&gt;</td><td class="mono">O(N·D)</td><td class="note">Entire run</td><td class="note">Sparse: only covered (locus, ref, alt) tuples per cell</td></tr>
+        <tr><td class="mono">θ matrix [K × L]</td><td class="mono">O(K·L) per thread</td><td class="note">Per restart</td><td class="note">T threads × K×L f32s. For T=8,K=4,L=8000: 1 MB</td></tr>
+        <tr><td class="mono">log_probs [N × K]</td><td class="mono">O(N·K) per thread</td><td class="note">Per restart</td><td class="note">Best solution per thread retained until merge</td></tr>
+        <tr><td class="mono">PlotData (Arc&lt;Mutex&gt;)</td><td class="mono">O(R + N)</td><td class="note">Entire run</td><td class="note">Restart losses + per-cell assignment for plots</td></tr>
+        <tr><td class="mono">Binomial log-coeff cache</td><td class="mono">O(N·D)</td><td class="note">Entire run</td><td class="note">Precomputed ln C(n,k) — amortised over R·S·I iterations</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout info reveal">
+    <div class="callout-label">Peak memory estimate</div>
+    For N=5000, D=100, K=4, L=8000, T=8, R=100:<br/>
+    CellData ≈ 5000×100×12B = <strong>6 MB</strong> ·
+    θ per thread ≈ 4×8000×4B = <strong>128 KB × 8 = 1 MB</strong> ·
+    log_probs ≈ 5000×4×4B = <strong>80 KB × 8 = 640 KB</strong> ·
+    Total ≈ <strong>~10 MB</strong> — well within RAM bounds for typical datasets.
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §14 FULL COMPLEXITY ═══════════════════ -->
+<div class="section reveal" id="s14">
+  <div class="sec-num">§ 14</div>
+  <h2 class="sec-title">Full Pipeline Complexity Summary</h2>
+
+  <div class="diagram reveal">
+    <div class="diagram-title">Click to reveal complexity — term by term</div>
+    <div class="formula-reveal" id="full-formula"></div>
+    <button class="f-trigger" onclick="revealFormula()" id="formula-btn">▶ Reveal formula</button>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table>
+      <thead><tr><th>Stage</th><th>Time</th><th>Space</th><th>% Runtime</th></tr></thead>
+      <tbody>
+        <tr><td>Data loading</td><td><span class="O O-lin">O(N·D)</span></td><td class="mono">O(N·D)</td><td class="note">~1%</td></tr>
+        <tr><td>Locus QC</td><td><span class="O O-lin">O(L₀)</span></td><td class="mono">O(L₀)</td><td class="note">&lt;0.1%</td></tr>
+        <tr><td>Cluster init (per restart)</td><td><span class="O O-lin">O(K·L)</span></td><td class="mono">O(K·L)</td><td class="note">&lt;0.1%</td></tr>
+        <tr style="background:rgba(240,165,0,.04)">
+          <td><strong>EM/KHM restarts</strong></td>
+          <td><span class="O O-quad">O(R·S·I·N·D·K / T)</span></td>
+          <td class="mono">O(T·(N·K + K·L))</td>
+          <td class="note" style="color:var(--amber)"><strong>95–99%</strong></td>
+        </tr>
+        <tr><td>Merge + assignment</td><td><span class="O O-lin">O(T·N·K)</span></td><td class="mono">O(N·K)</td><td class="note">&lt;0.1%</td></tr>
+        <tr><td>Output + plots</td><td><span class="O O-1">O(N + 1)</span></td><td class="mono">O(N)</td><td class="note">&lt;0.1%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ §15 OPTIMISATION MAP ═══════════════════ -->
+<div class="section reveal" id="s15">
+  <div class="sec-num">§ 15</div>
+  <h2 class="sec-title">Optimisation Opportunity Map</h2>
+  <p class="sec-desc">Ranked by expected impact. The top entry alone would deliver &gt;4× speedup on modern hardware.</p>
+
+  <div class="steps-wrap">
+    <div class="steps-header">
+      <span class="steps-title">▶ Top Optimisations — Highest Impact First</span>
+      <span class="steps-counter" id="opt-ctr">Step 1 of 5</span>
+    </div>
+    <div class="steps-body" id="opt-steps"></div>
+    <div class="steps-nav" id="opt-nav"></div>
+  </div>
+
+  <div class="callout good reveal" style="margin-top:24px">
+    <div class="callout-label">Bottom line</div>
+    The v3.0.0 rewrite is architecturally sound. The clustering loop is the correct bottleneck.
+    The sparse CellData design already captures the most important algorithmic optimisation.
+    Future gains come from hardware-level SIMD, not from algorithmic redesign.
+  </div>
+</div>
+
+<!-- References -->
+<div class="section reveal" style="border-top:1px solid var(--border);padding-top:32px">
+  <h2 class="sec-title" style="font-size:1.2rem">References</h2>
+  <p class="body-text" style="font-size:.9rem">
+    [1] Heaton, H. et al. (2020). Souporcell: robust clustering of single-cell RNA-seq data by genotype without reference genotypes. <em>Nature Methods</em> 17, 615–620. doi:10.1038/s41592-020-0820-1<br/>
+    [2] Dempster, A.P., Laird, N.M., Rubin, D.B. (1977). Maximum likelihood from incomplete data via the EM algorithm. <em>JRSS-B</em> 39(1), 1–38.<br/>
+    [3] Arthur, D., Vassilvitskii, S. (2007). k-means++: the advantages of careful seeding. <em>SODA</em> '07.<br/>
+    [4] Zhang, B. (2000). Generalized K-harmonic means — boosting in unsupervised learning. <em>HP Labs Technical Report</em>.<br/>
+    [5] Amdahl, G. (1967). Validity of the single processor approach to achieving large scale computing capabilities. <em>AFIPS</em>.
+  </p>
+</div>
+
+</main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// VERSION FETCH
+// ═══════════════════════════════════════════════
+(function(){
+  const D='v3.0.0';
+  function apply(v){
+    document.querySelectorAll('.ver').forEach(el=>el.textContent=v);
+    document.getElementById('sb-ver').textContent=v;
+    document.title=document.title.replace(/v[\d.]+/,v);
+  }
+  // Only fetch from server when running via souporcell --gui (http/https).
+  // When opened directly from disk (file://) the fetch would hit CORS and fail —
+  // in that case just use the embedded default immediately.
+  if(location.protocol==='http:'||location.protocol==='https:'){
+    fetch('/api/version')
+      .then(r=>r.json())
+      .then(d=>apply('v'+d.version))
+      .catch(()=>apply(D));
+  } else {
+    apply(D);
+  }
+})();
+
+// ═══════════════════════════════════════════════
+// SCROLL SPY + SIDEBAR
+// ═══════════════════════════════════════════════
+function scrollToSection(id){
+  document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
+      const id=e.target.id;
+      const link=document.querySelector(`.sb-link[onclick*="${id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+},{threshold:.2,rootMargin:'-20% 0px -60% 0px'});
+document.querySelectorAll('.section[id]').forEach(s=>observer.observe(s));
+
+// ═══════════════════════════════════════════════
+// REVEAL ON SCROLL
+// ═══════════════════════════════════════════════
+const revObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');}});
+},{threshold:.08});
+document.querySelectorAll('.reveal,.section').forEach(el=>revObs.observe(el));
+
+// ── All DOM-building code runs after document is fully parsed ──
+document.addEventListener('DOMContentLoaded', function() {
+
+
+// ═══════════════════════════════════════════════
+// STEP WIZARD BUILDER
+// ═══════════════════════════════════════════════
+function buildWizard(containerId, navId, ctrId, steps){
+  const container=document.getElementById(containerId);
+  const nav=document.getElementById(navId);
+  const ctr=document.getElementById(ctrId);
+  if(!container||!nav)return;
+  let current=0;
+
+  const panels=steps.map((s,i)=>{
+    const div=document.createElement('div');
+    div.className='step-panel'+(i===0?' active':'');
+    div.innerHTML=`
+      ${s.why?`<div class="step-why">WHY — ${s.why}</div>`:''}
+      <div class="step-what">${s.what}</div>
+      <div class="step-how">${s.how}</div>
+      ${s.formula?`<div class="step-formula">${s.formula}</div>`:''}
+      ${s.insight?`<div class="step-insight">${s.insight}</div>`:''}
+    `;
+    container.appendChild(div);
+    return div;
+  });
+
+  // Dots
+  const dotWrap=document.createElement('div');
+  dotWrap.style.display='flex';dotWrap.style.gap='6px';dotWrap.style.flex='1';
+  steps.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='step-dot'+(i===0?' active':'');
+    d.onclick=()=>goto(i);
+    dotWrap.appendChild(d);
+  });
+  nav.appendChild(dotWrap);
+
+  const btnWrap=document.createElement('div');
+  btnWrap.className='steps-nav-btns';
+  const prev=document.createElement('button');
+  prev.className='step-btn';prev.textContent='← Prev';prev.disabled=true;
+  const next=document.createElement('button');
+  next.className='step-btn play';next.textContent='Next →';
+  prev.onclick=()=>goto(current-1);
+  next.onclick=()=>goto(current+1);
+  btnWrap.appendChild(prev);btnWrap.appendChild(next);
+  nav.appendChild(btnWrap);
+
+  function goto(i){
+    if(i<0||i>=steps.length)return;
+    panels[current].classList.remove('active');panels[current].classList.add('exit');
+    setTimeout(()=>panels[current].classList.remove('exit'),400);
+    current=i;
+    panels[current].classList.add('active');
+    dotWrap.querySelectorAll('.step-dot').forEach((d,j)=>
+      d.classList.toggle('active',j===current));
+    ctr.textContent=`Step ${current+1} of ${steps.length}`;
+    prev.disabled=current===0;
+    next.disabled=current===steps.length-1;
+    if(current===steps.length-1){next.textContent='✔ Done';next.className='step-btn';}
+    else{next.textContent='Next →';next.className='step-btn play';}
+  }
+}
+
+// ═══════════════════════════════════════════════
+// §1 NOTATION LEGEND
+// ═══════════════════════════════════════════════
+const LEGEND=[
+  {sym:'N',  color:'var(--cyan)',   label:'Cells',      desc:'Number of cell barcodes'},
+  {sym:'L',  color:'var(--violet)', label:'Loci (QC)',  desc:'SNP loci passing all QC filters'},
+  {sym:'D',  color:'var(--green)',  label:'Coverage',   desc:'Mean covered loci per cell (sparse)'},
+  {sym:'K',  color:'var(--amber)',  label:'Clusters',   desc:'Number of donor clusters'},
+  {sym:'R',  color:'var(--pink)',   label:'Restarts',   desc:'Independent random starts'},
+  {sym:'T',  color:'var(--cyan)',   label:'Threads',    desc:'Parallel CPU threads'},
+  {sym:'S',  color:'var(--violet)', label:'Ann. steps', desc:'Annealing temperature steps'},
+  {sym:'I',  color:'var(--green)',  label:'Iterations', desc:'EM/KHM iterations per step'},
+  {sym:'p',  color:'var(--amber)',  label:'KHM exp',    desc:'Harmonic exponent (default 25)'},
+];
+const grid=document.getElementById('legend-grid');
+LEGEND.forEach(v=>{
+  const card=document.createElement('div');
+  card.style.cssText=`background:var(--surface2);border:1px solid var(--border2);
+    border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .2s`;
+  card.innerHTML=`<div style="font-family:var(--font-mono);font-size:1.4rem;
+    font-weight:700;color:${v.color};line-height:1">${v.sym}</div>
+    <div style="font-size:10px;color:var(--ink3);margin-top:3px">${v.label}</div>
+    <div style="font-size:10px;color:var(--ink4);margin-top:2px;display:none"
+         class="leg-desc">${v.desc}</div>`;
+  card.onclick=()=>{
+    const d=card.querySelector('.leg-desc');
+    d.style.display=d.style.display==='none'?'block':'none';
+    card.style.borderColor=d.style.display==='none'?'var(--border2)':v.color;
+  };
+  grid.appendChild(card);
+});
+
+// ═══════════════════════════════════════════════
+// §2 PIPELINE ANIMATION
+// ═══════════════════════════════════════════════
+const PIPE_STAGES=[
+  {label:'Load barcodes', cls:'io',   cplx:'O(N)',           delay:0},
+  {label:'Pass 1\nQC stats',cls:'io', cplx:'O(N·D)',         delay:150},
+  {label:'QC Filter',    cls:'proc',  cplx:'O(L₀)',          delay:300},
+  {label:'Pass 2\nCellData',cls:'io', cplx:'O(N·D)',         delay:450},
+  {label:'Init θ',       cls:'proc',  cplx:'O(K·L)',         delay:600},
+  {label:'EM/KHM\nRestarts',cls:'hot',cplx:'O(R·S·I·N·D·K/T)',delay:750},
+  {label:'Global best',  cls:'proc',  cplx:'O(T·N·K)',       delay:900},
+  {label:'Assign cells', cls:'proc',  cplx:'O(N·K)',         delay:1050},
+  {label:'Write TSV',    cls:'out',   cplx:'O(N)',           delay:1200},
+  {label:'Plots + HTML', cls:'out',   cplx:'O(1)',           delay:1350},
+];
+const pipeFlow=document.getElementById('pipeline-flow');
+PIPE_STAGES.forEach((s,i)=>{
+  if(i>0){
+    const arr=document.createElement('div');arr.className='pipe-arrow';arr.textContent='→';
+    pipeFlow.appendChild(arr);
+  }
+  const wrap=document.createElement('div');wrap.className='pipe-stage';wrap.id=`ps${i}`;
+  wrap.innerHTML=`<div class="pipe-box ${s.cls}">${s.label.replace('\n','<br/>')}</div>
+    <div class="pipe-cplx">${s.cplx}</div>`;
+  pipeFlow.appendChild(wrap);
+});
+function animatePipeline(){
+  document.getElementById('pipe-status').textContent='Animating…';
+  PIPE_STAGES.forEach((s,i)=>{
+    setTimeout(()=>{
+      document.getElementById(`ps${i}`)?.classList.add('show');
+      if(i===PIPE_STAGES.length-1)
+        document.getElementById('pipe-status').textContent='✔ All 10 stages loaded';
+    },s.delay);
+  });
+}
+function resetPipeline(){
+  PIPE_STAGES.forEach((_,i)=>document.getElementById(`ps${i}`)?.classList.remove('show'));
+  document.getElementById('pipe-status').textContent='';
+}
+
+// ═══════════════════════════════════════════════
+// §3 LOADING WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('load-steps','load-nav','load-ctr',[
+  {why:'The file is too large to hold in memory twice',
+   what:'Stream-parse MatrixMarket format (.mtx)',
+   how:'Each line of ref.mtx and alt.mtx is read once per pass. The format is: <code>row col value</code> where row=locus, col=cell. Lines are parsed as integers — no heap allocation per line.',
+   formula:`<span class="cmt">// File header (3 lines): skip</span>
+<span class="sym">parse_cost</span> = <span class="val">O(file_size)</span>  <span class="cmt">// streaming, 128 KB buffer</span>`,
+   insight:'MatrixMarket is a sparse format — only non-zero entries are stored. A 10,000×80,000 dense matrix would be 3.2 GB; the sparse file is typically 50–200 MB.'},
+  {why:'We need to know which loci are informative before storing anything',
+   what:'Pass 1 — collect per-locus coverage statistics',
+   how:'For every (locus, cell, value) triplet: increment that locus\'s cell count, ref-UMI sum, and alt-UMI sum. Store in a HashMap&lt;locus_id, LociStats&gt;. This takes O(nnz) time and O(L₀) space.',
+   formula:`<span class="sym">T_pass1</span> = <span class="val">O(nnz_ref + nnz_alt)</span>
+         = <span class="val">O(N · D)</span>  <span class="cmt">// D = mean non-zeros per cell</span>
+<span class="sym">Space</span>   = <span class="val">O(L₀)</span>  <span class="cmt">// one stats struct per raw locus</span>`,
+   insight:'Pass 1 never allocates per-cell data. It only tracks aggregate statistics per locus — making it extremely cache-friendly and fast.'},
+  {why:'Uninformative loci waste memory and CPU in every EM iteration forever',
+   what:'QC filter — prune loci that fail any threshold',
+   how:'Apply four independent integer comparisons: min_ref, min_alt, min_ref_umis, min_alt_umis. Build a compact locus_to_index HashMap for the passing loci. Only ~5–20% pass.',
+   formula:`<span class="sym">T_qc</span> = <span class="val">O(L₀)</span>  <span class="cmt">// one comparison per locus</span>
+<span class="sym">L</span>    = <span class="val">L₀ × f_pass</span>  <span class="cmt">// f_pass ≈ 0.05–0.20</span>
+<span class="cmt">// Result: L ≪ L₀ loci in locus_to_index</span>`,
+   insight:'Every locus dropped here saves N × S × I × (R/T) multiplications in the EM inner loop. QC pays for itself on the very first iteration.'},
+  {why:'Now that we know which loci matter, we can build the compact sparse structure',
+   what:'Pass 2 — build CellData sparse row format',
+   how:'Re-read both matrix files. For each (locus, cell, ref, alt) where locus passes QC: append (locus_idx, ref, alt, ln C(total,alt)) to that cell\'s loci Vec. This builds the exact sparse structure the EM inner loop needs.',
+   formula:`<span class="sym">T_pass2</span> = <span class="val">O(N · D)</span>  <span class="cmt">// same scan, only storing QC-passing loci</span>
+<span class="sym">Space</span>   = <span class="val">O(N · D)</span>  <span class="cmt">// D covered loci per cell on average</span>
+<span class="cmt">// Also precomputes ln C(n,k) — O(1) lookup in EM</span>`,
+   insight:'The ln C(total, alt) binomial coefficient is precomputed here once and cached with each CellData entry. In EM it\'s used N × S × I × (R/T) times — amortised cost approaches zero.'},
+  {why:'D ≪ L is the most important constant factor in the whole algorithm',
+   what:'Sparsity exploitation — the key design decision',
+   how:'In a naive dense implementation, each E-step would loop over all L loci for every cell, giving O(N · L · K) per iteration. The sparse CellData loops only over D covered loci per cell, giving O(N · D · K) — mathematically identical because uncovered loci contribute 0 to the log-likelihood.',
+   formula:`<span class="cmt">// Dense (naive):</span>   <span class="sym">T_Estep</span> = <span class="val">O(N · L · K)</span>
+<span class="cmt">// Sparse (actual):</span>  <span class="sym">T_Estep</span> = <span class="val">O(N · D · K)</span>
+<span class="cmt">// Speedup: L/D ≈ 10–100× — for FREE</span>`,
+   insight:'This is the single most important algorithmic decision in the codebase. It requires no approximation — the result is bit-for-bit identical to the dense version.'},
+]);
+
+// ═══════════════════════════════════════════════
+// §3 SPARSITY VIZ
+// ═══════════════════════════════════════════════
+// ── Sparse matrix visualisation ──────────────────────────────
+let sparseData=null;
+function buildSparse(){
+  const canvas=document.getElementById('sparse-canvas');
+  if(!canvas)return;
+  const densInput=document.getElementById('sparse-dens');
+  const density=(densInput?parseInt(densInput.value):5)/100;
+  const N=60,L=120;
+  // Generate data with clustered coverage (biologically realistic)
+  const covered=[];
+  let nnz=0;
+  for(let n=0;n<N;n++){
+    covered.push([]);
+    for(let l=0;l<L;l++){
+      // Cells have uneven coverage per locus: some loci are hot, some cells are deep
+      const locusBias = (Math.sin(l*0.3)*0.5+0.5)*density*1.5;
+      const cellBias  = (Math.sin(n*0.4)*0.5+0.5)*density*1.5;
+      const p = Math.min(0.9, (locusBias+cellBias)/2);
+      const c = Math.random()<p;
+      covered[n].push(c);
+      if(c)nnz++;
+    }
+  }
+  sparseData={N,L,covered,nnz};
+  drawSparse();
+  const pct=(nnz/(N*L)*100).toFixed(1);
+  document.getElementById('sparse-stat').textContent=
+    `${nnz.toLocaleString()}/${(N*L).toLocaleString()} entries covered (${pct}%) · avg D=${(nnz/N).toFixed(1)} loci/cell`;
+}
+function drawSparse(){
+  const canvas=document.getElementById('sparse-canvas');
+  if(!canvas||!sparseData)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||800;
+  const H=parseInt(canvas.getAttribute('height'))||300;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  const {N,L,covered}=sparseData;
+  const cw=W/L, ch=H/N;
+  const gap=cw>3?1:0;
+  ctx.fillStyle='#0D1220';
+  ctx.fillRect(0,0,W,H);
+  // Draw row labels (cells) on hover — draw all cells
+  for(let n=0;n<N;n++){
+    for(let l=0;l<L;l++){
+      const x=l*cw+gap/2, y=n*ch+gap/2;
+      const w=cw-gap, h=ch-gap;
+      if(covered[n][l]){
+        // Colour intensity by simulated alt/ref ratio
+        const intensity=0.4+Math.random()*0.6;
+        ctx.fillStyle=`rgba(34,211,238,${intensity})`;
+      } else {
+        ctx.fillStyle='#0D1220';
+      }
+      ctx.fillRect(x,y,w,h);
+    }
+  }
+  // Draw axis labels
+  ctx.fillStyle='rgba(96,112,128,0.8)';
+  ctx.font=`${Math.max(8,Math.min(11,cw*2))}px monospace`;
+  ctx.fillText('cells →',2,H-2);
+  // Draw a "D ≈ X" line indicator for one row
+  const midN=Math.floor(N/2);
+  const rowCovered=covered[midN].map((c,l)=>c?l:-1).filter(l=>l>=0);
+  if(rowCovered.length>0){
+    ctx.strokeStyle='rgba(124,92,239,0.6)';
+    ctx.lineWidth=ch*0.8;
+    ctx.lineCap='round';
+    ctx.beginPath();
+    rowCovered.forEach(l=>{
+      const x=l*cw+cw/2, y=midN*ch+ch/2;
+      ctx.moveTo(x,y); ctx.lineTo(x+0.1,y);
+    });
+    ctx.stroke();
+    // Label this row
+    ctx.fillStyle='rgba(124,92,239,0.9)';
+    ctx.font='10px monospace';
+    ctx.fillText(`← cell ${midN}: D=${rowCovered.length}`,2,midN*ch+ch);
+  }
+}
+// Hover tooltip on sparse canvas
+(function(){
+  const canvas=document.getElementById('sparse-canvas');
+  if(!canvas)return;
+  canvas.addEventListener('mousemove',e=>{
+    if(!sparseData)return;
+    const rect=canvas.getBoundingClientRect();
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    const {N,L,covered}=sparseData;
+    const l=Math.floor(x/(rect.width/L));
+    const n=Math.floor(y/(rect.height/N));
+    if(n>=0&&n<N&&l>=0&&l<L){
+      canvas.title=`Cell ${n}, Locus ${l}: ${covered[n][l]?'COVERED (has reads)':'zero coverage'}`;
+    }
+  });
+})();
+buildSparse();
+// Redraw on resize
+window.addEventListener('resize',()=>{
+  if(sparseData)drawSparse();
+  if(emState)drawEM();
+  drawKHM();
+  drawAmdahl();
+  drawAnnealCurve();
+});
+
+// ═══════════════════════════════════════════════
+// §4 QC WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('qc-steps','qc-nav','qc-ctr',[
+  {why:'A locus covered by only 1 cell cannot distinguish donors',
+   what:'min_ref — minimum cells with ≥1 reference read',
+   how:'For each locus, count how many cells have at least one reference-allele UMI. If fewer than min_ref cells have ref coverage, the locus is excluded. Default: 4.',
+   formula:`<span class="cmt">// Pass 1 already counted ref_cell_count per locus</span>
+<span class="sym">keep</span> = locus.ref_cell_count <span class="val">≥ min_ref</span>
+<span class="sym">Cost</span> = <span class="val">O(1)</span> per locus  →  <span class="val">O(L₀)</span> total`,
+   insight:'min_ref and min_alt together ensure a locus has evidence in enough cells to be statistically meaningful for cluster separation.'},
+  {why:'A locus with no alt allele signal cannot separate donors',
+   what:'min_alt — minimum cells with ≥1 alternate read',
+   how:'Same as min_ref but for the alternate allele. A locus that is homozygous reference in every observed cell provides zero discriminating power between donors.',
+   formula:`<span class="sym">keep</span> = locus.alt_cell_count <span class="val">≥ min_alt</span>
+<span class="cmt">// Applied AND with min_ref — both must pass</span>`,
+   insight:'In practice, min_alt is the tighter constraint. Many loci have good ref coverage but almost no alt reads (monomorphic in the cell population).'},
+  {why:'Low total UMI count means the allele frequency estimate is noisy',
+   what:'min_ref_umis + min_alt_umis — total UMI thresholds',
+   how:'Sum all ref UMIs (or alt UMIs) across all cells for a given locus. If either sum is below its threshold, exclude the locus. Default: 0 for both (no UMI filter). Set to 5–10 for noisy data.',
+   formula:`<span class="sym">keep</span> = locus.total_ref_umis <span class="val">≥ min_ref_umis</span>
+       AND locus.total_alt_umis <span class="val">≥ min_alt_umis</span>`,
+   insight:'The UMI filters are off by default. They become useful when the cell/locus coverage is very low (e.g. low-sequencing-depth experiments) where even passing the cell-count filters gives a noisy θ estimate.'},
+  {why:'We need O(1) lookup from original locus ID to packed index',
+   what:'Build locus_to_index HashMap after filtering',
+   how:'After all four filters are applied, assign each passing locus a compact 0-based index. This is stored in a hashbrown HashMap for O(1) average-case lookup during Pass 2 and during VCF-based initialisation.',
+   formula:`<span class="sym">T_idx</span> = <span class="val">O(L)</span>  <span class="cmt">// O(1) amortised per insert (hashbrown)</span>
+<span class="cmt">// L = |{loci passing all 4 filters}| ≪ L₀</span>`,
+   insight:'This one HashMap enables the entire sparse data structure. Without it, Pass 2 would need a O(log L₀) binary search per entry — adding O(N·D·log L₀) overhead to loading.'},
+]);
+
+// QC progress bars
+const qcBars=document.getElementById('qc-bars');
+const qcData=[
+  {label:'Raw loci (L₀)', pct:100, color:'var(--ink3)'},
+  {label:'Pass min_ref ≥ 4', pct:35, color:'var(--cyan)'},
+  {label:'Pass min_alt ≥ 4', pct:22, color:'var(--violet)'},
+  {label:'Pass UMI filters', pct:18, color:'var(--amber)'},
+  {label:'Final QC loci (L)', pct:15, color:'var(--green)'},
+];
+qcData.forEach(d=>{
+  const wrap=document.createElement('div');
+  wrap.className='prog-bar-wrap reveal';
+  wrap.innerHTML=`<div class="prog-label"><span>${d.label}</span>
+    <span style="color:${d.color}">${d.pct}%</span></div>
+    <div class="prog-track"><div class="prog-fill" style="background:${d.color};width:0"
+      data-target="${d.pct}"></div></div>`;
+  qcBars.appendChild(wrap);
+});
+// Animate bars when visible
+const barObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.querySelectorAll('.prog-fill').forEach(f=>{
+        setTimeout(()=>f.style.width=f.dataset.target+'%',100);
+      });
+    }
+  });
+},{threshold:.3});
+document.querySelectorAll('.prog-bar-wrap').forEach(b=>barObs.observe(b));
+
+// ═══════════════════════════════════════════════
+// §5 INIT WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('init-steps','init-nav','init-ctr',[
+  {why:'A good starting θ reduces the number of restarts needed to find the global optimum',
+   what:'random_uniform — draw θ uniformly from [θ_min, θ_max]',
+   how:'For each of the K clusters and L loci, sample θ_kl ~ Uniform(0.01, 0.99). Fast. No biological signal. Requires more restarts to compensate. This is the default because it is seed-deterministic and unbiased.',
+   formula:`<span class="cmt">// For each (k, l) pair:</span>
+<span class="sym">θ_kl</span> ← <span class="val">Uniform(θ_min, θ_max)</span>
+<span class="sym">T_init</span> = <span class="val">O(K · L)</span>  <span class="cmt">// K×L RNG calls</span>`,
+   insight:'random_uniform is fast and produces high-variance starting points across restarts, which is actually desirable — it ensures the restart landscape is well-sampled.'},
+  {why:'Using the data itself for initialisation reduces the number of restarts needed',
+   what:'random_cell_assignment — average cells assigned to each cluster',
+   how:'Randomly assign each cell to one of K clusters. Then compute the mean allele frequency within each cluster as the initial θ. Biologically grounded — the initial centres reflect real allele distributions in the data.',
+   formula:`<span class="cmt">// Step 1: assign N cells to K clusters randomly</span>
+<span class="sym">T₁</span> = <span class="val">O(N)</span>
+<span class="cmt">// Step 2: accumulate allele sums per cluster</span>
+<span class="sym">T₂</span> = <span class="val">O(N · D)</span>
+<span class="cmt">// Step 3: divide to get mean θ_kl</span>
+<span class="sym">T₃</span> = <span class="val">O(K · L)</span>`,
+   insight:'For large K (≥8), this strategy significantly improves convergence stability. The extra O(N·D) cost is negligible relative to O(R·S·I·N·D·K).'},
+  {why:'If donor genotypes are known, we can skip the random search entirely',
+   what:'known_genotypes — initialise from VCF donor allele frequencies',
+   how:'Parse a donor VCF/BCF. For each locus in locus_to_index, read the ALT allele frequency from the donor\'s genotype field. Clamp to [θ_min, θ_max]. This gives a biologically exact starting point — EM converges in very few iterations.',
+   formula:`<span class="sym">T_vcf</span> = <span class="val">O(vcf_entries)</span>  <span class="cmt">// parse and index VCF</span>
+<span class="sym">T_init</span> = <span class="val">O(K · L)</span>       <span class="cmt">// fill θ from VCF data</span>
+<span class="cmt">// With known genotypes, R=10 restarts often suffices vs R=100</span>`,
+   insight:'VCF initialisation is the highest-quality option but requires prior knowledge of donor identities. It is the appropriate choice for multiplexing experiments with a known donor panel.'},
+]);
+
+// ═══════════════════════════════════════════════
+// §6 ANNEALING WIZARD + VIZ
+// ═══════════════════════════════════════════════
+buildWizard('ann-steps','ann-nav','ann-ctr',[
+  {why:'Standard EM gets trapped in local optima when the starting point is poor',
+   what:'Simulated annealing — start with soft ("hot") assignments, cool toward hard ("cold")',
+   how:'At high temperature τ, the softmax is nearly uniform — cells are assigned equally to all clusters regardless of the log-likelihood. As τ decreases, assignments sharpen until τ=1.0 gives the standard EM softmax.',
+   formula:`<span class="cmt">// Temperature schedule (EM)</span>
+<span class="sym">τ</span>(step) = total_alleles_n / (base_em × 2^step)
+<span class="sym">τ_final</span> = <span class="val">1.0</span>  <span class="cmt">// forced at last step</span>`,
+   insight:'The annealing schedule is cell-specific: cells with more total alleles get a higher temperature. This naturally adapts the exploration to the data quality of each cell.'},
+  {why:'τ controls the "confidence" of cell-to-cluster assignment',
+   what:'Temperature-scaled softmax — the E-step assignment',
+   how:'p̃_nk = exp(log P(cell_n | k) / τ) / Σ_j exp(log P(cell_n | j) / τ). When τ is large: all exp() terms are nearly 1 → p̃_nk ≈ 1/K (uniform). When τ→1: standard softmax → winner takes most probability.',
+   formula:`<span class="cmt">// High T: exploration</span>
+<span class="sym">p̃_nk</span> ≈ <span class="val">1/K</span>  (all clusters equal)
+<span class="cmt">// Low T = 1: standard EM softmax</span>
+<span class="sym">p̃_nk</span> = <span class="val">softmax(log P / 1.0)</span>`,
+   insight:'The log-sum-exp numerical stability trick is applied before dividing by τ to prevent overflow when τ is small.'},
+  {why:'We need to cool fast enough to converge but slow enough to escape local optima',
+   what:'Geometric cooling: τ halves every temperature step',
+   how:'At step s: τ = total_alleles / (base × 2^s). With base=20, step=0: τ = N_alleles/20 (hot). Step=8: τ = N_alleles/5120 → very cold. The geometric schedule (2^s) is the standard choice in SA literature.',
+   formula:`<span class="cmt">// For a cell with 100 total alleles, base=20:</span>
+step=0: τ = 100/(20×1)  = <span class="val">5.0</span>   (hot)
+step=4: τ = 100/(20×16) = <span class="val">0.31</span>  (cooling)
+step=8: τ = 100/(20×256)= <span class="val">0.02</span>  (cold)
+step=8: τ → <span class="val">1.0</span>  (forced — standard EM)`,
+   insight:'The final step always uses τ=1.0 regardless of the schedule. This guarantees the final iteration is standard EM, which has the convergence guarantee.'},
+  {why:'anneal_base_em was hardcoded in v2.4 — no way to tune it',
+   what:'v3.0 makes base_em fully configurable via --anneal_base_em',
+   how:'Higher base → hotter start → more exploration → more robust to local optima → slower convergence. Lower base → colder start → faster but more sensitive to initialisation. Tunable per-dataset.',
+   formula:`<span class="cmt">// v2.4: hardcoded 20.0</span>
+<span class="cmt">// v3.0: --anneal_base_em &lt;value&gt; or SOUPC_ANNEAL_BASE_EM</span>
+<span class="sym">τ_0</span> = total_alleles / (<span class="val">base_em</span> × 1)`,
+   insight:'For very noisy data or large K, increasing base_em to 50–100 can significantly improve convergence stability at the cost of slower per-restart time.'},
+  {why:'KHM already runs hotter by design — it uses a different base',
+   what:'KHM uses anneal_base_khm = 0.5 (vs EM\'s 20.0)',
+   how:'With base=0.5 and 100 alleles, step 0: τ = 100/0.5 = 200. This is 40× hotter than EM at the same step. KHM membership functions are already sharper (harmonic exponent p) so a hotter annealing schedule compensates.',
+   formula:`<span class="cmt">// KHM temperature (default base=0.5)</span>
+step=0: τ = 100/0.5 = <span class="val">200</span>   (very hot)
+step=4: τ = 100/8   = <span class="val">12.5</span>  (cooling)
+<span class="cmt">// EM comparison (base=20):</span>
+step=0: τ = 100/20  = <span class="val">5.0</span>   (moderately hot)`,
+   insight:'The very hot KHM start means the algorithm explores the full landscape before the Q-function sharpness takes over. This is why KHM is recommended for large K (≥8) where local optima are more common.'},
+]);
+
+function drawAnnealCurve(){
+  const base=parseInt(document.getElementById('anneal-base').value);
+  document.getElementById('anneal-base-val').textContent=base;
+  const container=document.getElementById('anneal-bars');
+  const labelsDiv=document.getElementById('anneal-labels');
+  const S=9,alleles=100;
+  container.innerHTML='';labelsDiv.innerHTML='';
+  const maxT=alleles/base;
+  for(let s=0;s<S;s++){
+    const raw=s===S-1?1.0:alleles/(base*Math.pow(2,s));
+    const display=s===S-1?1.0:raw;
+    const frac=Math.min(display/maxT,1);
+    const wrap=document.createElement('div');wrap.className='a-bar-wrap';
+    const bar=document.createElement('div');bar.className='a-bar';
+    const pct=Math.max(3,frac*100);
+    const h=Math.floor(240*(1-frac));
+    bar.style.height=pct+'%';
+    bar.style.background=`hsl(${h},70%,55%)`;
+    wrap.appendChild(bar);
+    const lbl=document.createElement('div');lbl.className='a-bar-label';
+    lbl.textContent=display.toFixed(1);
+    wrap.appendChild(lbl);
+    container.appendChild(wrap);
+    const tl=document.createElement('span');
+    tl.style.flex='1';tl.style.textAlign='center';
+    tl.textContent='T'+s;labelsDiv.appendChild(tl);
+  }
+}
+drawAnnealCurve();
+document.getElementById('anneal-base').oninput=drawAnnealCurve;
+
+// ═══════════════════════════════════════════════
+// §7 EM WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('em-steps','em-nav','em-ctr',[
+  {why:'We need to infer which donor each cell came from purely from allele counts',
+   what:'EM — iterative maximum likelihood estimation',
+   how:'Start with random θ (allele frequency matrix). Alternate: E-step computes P(cell | cluster k) for all k; M-step updates θ to maximize expected log-likelihood. Repeat until convergence.',
+   formula:`<span class="cmt">// Outer loop: S annealing steps</span>
+for step in 0..S:
+  <span class="cmt">// Inner loop: until |Δ loss| &lt; ε·N</span>
+  while not_converged:
+    E_step(cells, θ, τ)  →  soft_assignments
+    M_step(soft_assignments, cells)  →  θ_new`,
+   insight:'EM is guaranteed to never decrease the total log-likelihood on each iteration (when τ=1). The annealing wrapping sacrifices this guarantee for global exploration.'},
+  {why:'The E-step is the computational bottleneck — called billions of times',
+   what:'E-step: compute binomial log-likelihood for each (cell, cluster) pair',
+   how:'For cell n and cluster k: sum over all covered loci l: alt_nl·ln(θ_kl) + ref_nl·ln(1-θ_kl) + ln C(total_nl, alt_nl). The binomial coefficient is precomputed. Result: K log-likelihoods per cell.',
+   formula:`log P(n|k) = Σ_l [ ln C(tot,alt) + alt·ln θ_kl + ref·ln(1−θ_kl) ]
+<span class="sym">T_per_cell</span> = <span class="val">O(D · K)</span>
+<span class="sym">T_Estep</span>   = <span class="val">O(N · D · K)</span>  per iteration`,
+   insight:'The inner loop iterates over D≈50 covered loci, not L≈8000 total loci. This is the sparsity exploit. At K=4, D=50: 200 multiply-add operations per cell per iteration.'},
+  {why:'We need to convert log-likelihoods to normalised probabilities without overflow',
+   what:'log-sum-exp trick for numerically stable softmax',
+   how:'Subtract the maximum log-probability before exponentiating: p̃_nk = exp(lp_nk - max_lp) / Σ exp(lp_nj - max_lp). This prevents exp() overflow when log-probabilities are large negative numbers.',
+   formula:`<span class="sym">max_lp</span>  = max_k(log P(n|k))
+<span class="sym">p̃_nk</span>   = exp((log P(n|k) − max_lp) / τ)
+<span class="sym">p̃_nk</span>  /= Σ_j p̃_nj     <span class="cmt">// normalise</span>
+<span class="sym">T</span>      = <span class="val">O(K)</span> per cell`,
+   insight:'Without the max subtraction, for a cell with log P(n|k) ≈ -250,000: exp(-250000) = 0 in f32/f64. The trick makes it exp(0)=1 for the best cluster, which is numerically stable.'},
+  {why:'M-step must update θ without keeping all N·K probabilities in memory',
+   what:'M-step: fused accumulator loop — same pass as E-step',
+   how:'While computing the E-step for each cell, simultaneously accumulate weighted sums: num_kl += p̃_nk · alt_nl, den_kl += p̃_nk · total_nl. After all cells: θ_kl = (num_kl + ψ_alt) / (den_kl + ψ_total).',
+   formula:`<span class="cmt">// Fused E+M loop (one pass over cells):</span>
+for n in cells:
+  p̃ = E_step(n, θ)
+  for k in 0..K:
+    for l in n.loci:
+      num[k][l] += p̃[k] × alt[n][l]
+      den[k][l] += p̃[k] × tot[n][l]
+<span class="sym">T_Mstep</span> = <span class="val">O(N · D · K)</span>`,
+   insight:'The E and M steps share the same cell-locus loop, so they are effectively fused. This is a key implementation optimisation — it reduces memory bandwidth by 2×.'},
+  {why:'We need to know when to stop and whether we found the global optimum',
+   what:'Convergence check + restart best-tracking',
+   how:'Convergence: |loss_new - loss_old| < conv_tol × N. Hard cap: max_iter per temperature step. After each restart: compare total log-likelihood to global best; update if better. Global best across all threads is the output.',
+   formula:`<span class="cmt">// Convergence condition:</span>
+|loss_t − loss_{t-1}| < <span class="val">conv_tol × N</span>
+<span class="cmt">// Restart best tracking:</span>
+if loss > best_loss: best = (loss, θ, log_probs)`,
+   insight:'conv_tol × N scales the threshold with dataset size, so the same value (0.01) works for N=500 and N=50,000 without tuning.'},
+  {why:'A single restart may not find the global optimum — random restarts provide insurance',
+   what:'Full EM complexity across all R restarts and T threads',
+   how:'R restarts distributed across T threads: ⌈R/T⌉ per thread. Each restart runs S×I EM iterations. Total work: R × S × I × N × D × K, divided by T for parallel execution.',
+   formula:`<span class="cmt">// Total EM complexity:</span>
+<span class="sym">T_total</span> = <span class="val">O(R · S · I · N · D · K / T)</span>
+<span class="cmt">// For N=5000,D=50,K=4,R=100,S=9,I=15,T=8:</span>
+= 100×9×15×5000×50×4 / 8
+= <span class="val">≈ 16.9 billion operations / 8</span>
+= <span class="val">≈ 2.1 billion per thread</span>`,
+   insight:'At 4 GFLOPS per thread (typical for sequential Rust on modern CPU), this takes ≈0.5 seconds per thread. At 8 threads: ≈0.5s total for 100 restarts. This matches observed runtimes of 3–10s for typical datasets.'},
+]);
+
+// ═══════════════════════════════════════════════
+// §7 LIVE EM SIMULATION
+// ═══════════════════════════════════════════════
+let emState=null;
+function initEMState(){
+  const K=4,N=120;
+  const colorHex=['#22D3EE','#7C5CEF','#22C55E','#F0A500'];
+  const colorRGB=[[34,211,238],[124,92,239],[34,197,94],[240,165,0]];
+  const centers=Array.from({length:K},(_,k)=>({
+    x:0.15+0.7*(k%2), y:0.15+0.7*Math.floor(k/2),
+    color:colorHex[k], rgb:colorRGB[k]
+  }));
+  const cells=Array.from({length:N},()=>{
+    const k=Math.floor(Math.random()*K);
+    const c=centers[k];
+    return {
+      x: c.x+(Math.random()-.5)*.5,
+      y: c.y+(Math.random()-.5)*.5,
+      trueK:k, assignedK:Math.floor(Math.random()*K),
+      px:0,py:0
+    };
+  });
+  return {centers,cells,iter:0,loss:0,K,N};
+}
+function resetEMSim(){
+  emState=initEMState();
+  drawEM();
+  document.getElementById('em-iter-stat').textContent='0';
+  document.getElementById('em-loss-stat').textContent='—';
+  document.getElementById('em-run-btn').textContent='▶ Run EM';
+  document.getElementById('em-run-btn').className='step-btn play';
+}
+let emRunning=false;
+function runEMSim(){
+  if(!emState)resetEMSim();
+  emRunning=!emRunning;
+  const btn=document.getElementById('em-run-btn');
+  if(emRunning){
+    btn.textContent='⏸ Pause';btn.className='step-btn';
+    runEMLoop();
+  } else {
+    btn.textContent='▶ Resume';btn.className='step-btn play';
+  }
+}
+function stepEMSim(){if(!emState)resetEMSim();doEMStep();drawEM();}
+function doEMStep(){
+  const {centers,cells,K}=emState;
+  // E-step: assign each cell to nearest centre
+  cells.forEach(cell=>{
+    let best=-1,bestD=Infinity;
+    centers.forEach((c,k)=>{
+      const d=Math.hypot(cell.x-c.x,cell.y-c.y);
+      if(d<bestD){bestD=d;best=k;}
+    });
+    cell.assignedK=best;
+  });
+  // M-step: move centres to mean of assigned cells
+  centers.forEach((c,k)=>{
+    const assigned=cells.filter(cell=>cell.assignedK===k);
+    if(assigned.length>0){
+      c.x=assigned.reduce((s,cell)=>s+cell.x,0)/assigned.length;
+      c.y=assigned.reduce((s,cell)=>s+cell.y,0)/assigned.length;
+    }
+  });
+  // Compute loss (negative inertia)
+  const loss=-cells.reduce((s,cell)=>{
+    const c=centers[cell.assignedK];
+    return s+Math.hypot(cell.x-c.x,cell.y-c.y);
+  },0);
+  emState.iter++;emState.loss=loss;
+  document.getElementById('em-iter-stat').textContent=emState.iter;
+  document.getElementById('em-loss-stat').textContent=loss.toFixed(3);
+}
+async function runEMLoop(){
+  for(let i=0;i<30&&emRunning;i++){
+    doEMStep();drawEM();
+    await new Promise(r=>setTimeout(r,200));
+  }
+  emRunning=false;
+  document.getElementById('em-run-btn').textContent='↺ Restart';
+  document.getElementById('em-run-btn').className='step-btn';
+  document.getElementById('em-run-btn').onclick=resetEMSim;
+}
+function drawEM(){
+  const canvas=document.getElementById('em-canvas');
+  if(!canvas||!emState)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||800;
+  const H=parseInt(canvas.getAttribute('height'))||320;
+  if(canvas.width!==W*dpr){canvas.width=W*dpr;canvas.height=H*dpr;}
+  const ctx=canvas.getContext('2d');
+  ctx.save();ctx.scale(dpr,dpr);
+  // Background
+  ctx.fillStyle='#080E1A';ctx.fillRect(0,0,W,H);
+  // Subtle grid
+  ctx.strokeStyle='rgba(30,46,68,0.6)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=W/8){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=H/6){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  const {centers,cells}=emState;
+  const PAD=40;
+  const toX=x=>PAD+x*(W-PAD*2);
+  const toY=y=>PAD+y*(H-PAD*2);
+  // Draw Voronoi-like region shading
+  const imgData=ctx.createImageData(W,H);
+  for(let px=0;px<W;px+=3){
+    for(let py=0;py<H;py+=3){
+      const nx=(px-PAD)/(W-PAD*2), ny=(py-PAD)/(H-PAD*2);
+      let best=0,bestD=Infinity;
+      centers.forEach((c,k)=>{
+        const d=Math.hypot(nx-c.x,ny-c.y);
+        if(d<bestD){bestD=d;best=k;}
+      });
+      const col=centers[best].rgb;
+      const alpha=Math.max(0,1-bestD*2.5)*40;
+      for(let dx=0;dx<3;dx++)for(let dy=0;dy<3;dy++){
+        const i=4*((py+dy)*W+(px+dx));
+        imgData.data[i]=col[0];imgData.data[i+1]=col[1];imgData.data[i+2]=col[2];imgData.data[i+3]=alpha;
+      }
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+  // Draw connections from cells to their centre (faint lines)
+  cells.forEach(cell=>{
+    const c=centers[cell.assignedK];
+    ctx.beginPath();ctx.moveTo(toX(cell.x),toY(cell.y));ctx.lineTo(toX(c.x),toY(c.y));
+    ctx.strokeStyle=c.color+'18';ctx.lineWidth=1;ctx.stroke();
+  });
+  // Draw cells
+  cells.forEach(cell=>{
+    const c=centers[cell.assignedK];
+    const r=5;
+    ctx.beginPath();ctx.arc(toX(cell.x),toY(cell.y),r+2,0,Math.PI*2);
+    ctx.fillStyle=c.color+'22';ctx.fill();
+    ctx.beginPath();ctx.arc(toX(cell.x),toY(cell.y),r,0,Math.PI*2);
+    ctx.fillStyle=c.color+'CC';ctx.fill();
+    ctx.strokeStyle=c.color;ctx.lineWidth=1.5;ctx.stroke();
+  });
+  // Draw centre cluster hulls
+  centers.forEach((c,k)=>{
+    const pts=cells.filter(cell=>cell.assignedK===k);
+    if(pts.length===0)return;
+    // Bounding ellipse approximation
+    const xs=pts.map(p=>toX(p.x)), ys=pts.map(p=>toY(p.y));
+    const mx=xs.reduce((a,b)=>a+b,0)/xs.length;
+    const my=ys.reduce((a,b)=>a+b,0)/ys.length;
+    const rx=Math.max(20,Math.sqrt(xs.reduce((a,b)=>a+(b-mx)**2,0)/xs.length)*1.8);
+    const ry=Math.max(20,Math.sqrt(ys.reduce((a,b)=>a+(b-my)**2,0)/ys.length)*1.8);
+    ctx.beginPath();ctx.ellipse(mx,my,rx,ry,0,0,Math.PI*2);
+    ctx.strokeStyle=c.color+'55';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.stroke();
+    ctx.setLineDash([]);
+  });
+  // Draw centres (large, labelled)
+  centers.forEach((c,k)=>{
+    const x=toX(c.x),y=toY(c.y);
+    // Glow ring
+    const g=ctx.createRadialGradient(x,y,8,x,y,22);
+    g.addColorStop(0,c.color+'66');g.addColorStop(1,'transparent');
+    ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);
+    ctx.fillStyle=g;ctx.fill();
+    // Centre dot
+    ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);
+    ctx.fillStyle=c.color;ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.fillStyle='#000';ctx.font='bold 11px monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('K'+(k+1),x,y);
+    // Label with count
+    const cnt=cells.filter(cell=>cell.assignedK===k).length;
+    ctx.fillStyle=c.color;ctx.font='10px monospace';
+    ctx.fillText(`n=${cnt}`,x,y+20);
+  });
+  // Convergence indicator
+  if(emState.iter>0){
+    ctx.fillStyle='rgba(34,211,238,0.7)';ctx.font='11px monospace';
+    ctx.textAlign='left';ctx.textBaseline='top';
+    ctx.fillText(`iter ${emState.iter}  loss ${emState.loss.toFixed(2)}`,8,8);
+  }
+  ctx.restore();
+}
+resetEMSim();
+
+// ═══════════════════════════════════════════════
+// §8 E-STEP WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('estep-steps','estep-nav','estep-ctr',[
+  {why:'We need a probabilistic model of how reads are generated given a donor genotype',
+   what:'Binomial likelihood — P(alt_reads | total_reads, θ_kl)',
+   how:'At locus l, cell n, cluster k: the number of alt-allele reads follows Binomial(total_nl, θ_kl). The log-likelihood is alt·ln(θ) + ref·ln(1-θ) + ln C(total, alt). This is the inner product of the allele counts with the log-frequencies.',
+   formula:`log P(alt|tot, θ_kl) =
+  ln C(tot, alt)         <span class="cmt">// precomputed at load time</span>
+  + alt × ln(θ_kl)       <span class="cmt">// alt allele contribution</span>
+  + ref × ln(1−θ_kl)    <span class="cmt">// ref allele contribution</span>`,
+   insight:'The binomial model assumes independence across loci within a cell. This is valid because SNPs on different chromosomes are independent, and nearby SNPs on the same chromosome are selected to be uncorrelated.'},
+  {why:'We need to sum across all covered loci to get a cell-level score',
+   what:'Sum over covered loci — the sparse inner loop',
+   how:'For cell n and cluster k: total_log_P = Σ_{l ∈ covered(n)} log P(alt_nl | tot_nl, θ_kl). The sum runs over D(n) covered loci only — not all L loci. Uncovered loci contribute nothing to the likelihood (P(0|0, θ) = 1).',
+   formula:`log P(cell_n | cluster_k) =
+  Σ_{l ∈ n.loci} [ln C(tot,alt) + alt·ln θ_kl + ref·ln(1−θ_kl)]
+<span class="sym">T_per_cell</span> = <span class="val">O(D · K)</span>  <span class="cmt">// D ≈ 10–200</span>`,
+   insight:'The K log-likelihoods computed for one cell require D×K multiply-add operations. At D=50, K=4: 200 FMAs. Modern CPUs can do ~4 FMAs/cycle at 3 GHz = 12 GFLOPS → this takes ~17 nanoseconds per cell.'},
+  {why:'We need cluster weights (probabilities), not raw log-likelihoods',
+   what:'Temperature-scaled softmax with log-sum-exp',
+   how:'1. Compute lp_k = log P(cell_n | cluster_k) for all K clusters. 2. Find max_lp. 3. For each k: weight_k = exp((lp_k - max_lp) / τ). 4. Normalise: p̃_nk = weight_k / Σ weight_j.',
+   formula:`max_lp = max_k(lp_k)            <span class="cmt">// O(K)</span>
+p̃_nk  = exp((lp_nk − max_lp)/τ) <span class="cmt">// O(K) exp() calls</span>
+sum    = Σ_k p̃_nk                <span class="cmt">// O(K)</span>
+p̃_nk /= sum                      <span class="cmt">// O(K) normalise</span>`,
+   insight:'The division by τ before exp() is the key interaction with annealing. At high τ: all (lp-max_lp)/τ → 0, so all exp() → 1, giving uniform assignment. At τ=1: standard softmax.'},
+  {why:'The softmax allocation creates a new Vec on every cell — hot path allocation',
+   what:'normalize_in_log_with_temp allocates O(K) per cell',
+   how:'Current implementation: allocates a Vec<f32> of length K per cell per iteration. For N=5000, S×I=135 iterations: 675,000 Vec allocations. Each allocation involves a malloc+free. This is a known hot-path overhead.',
+   formula:`<span class="cmt">// Current: allocates K f32s per cell per iteration</span>
+N × S × I allocations = <span class="val">675,000</span> (N=5000)
+<span class="cmt">// Optimisation: reuse a thread-local buffer</span>
+→ <span class="val">1 allocation per thread per run</span>`,
+   insight:'Replacing this with a thread-local stack buffer or reusing a pre-allocated Vec would eliminate ~675,000 heap allocations per run. Expected speedup on allocation-heavy workloads: 5–15%.'},
+  {why:'We need to track the best restart without copying N×K probabilities',
+   what:'best_log_probs — only the argmax matters for output',
+   how:'After the final temperature step, each cell\'s cluster assignment is the argmax of its log_probs vector. Only the full log_probs of the best restart are retained — all others are discarded. The output TSV contains cluster index + all K log-probs.',
+   formula:`<span class="cmt">// Per cell output:</span>
+barcode  cluster_idx  lp_0  lp_1  ...  lp_{K-1}
+<span class="cmt">// cluster_idx = argmax_k(lp_k)</span>
+<span class="cmt">// Confidence = lp_best − lp_second_best</span>`,
+   insight:'The confidence score (best - second_best log-prob) is what troublet uses for doublet detection. High confidence = cell almost certainly from one donor. Low confidence = likely doublet.'},
+]);
+
+// ═══════════════════════════════════════════════
+// §9 M-STEP WIZARD + PSEUDOCOUNT VIZ
+// ═══════════════════════════════════════════════
+buildWizard('mstep-steps','mstep-nav','mstep-ctr',[
+  {why:'We need to update our estimate of θ_kl — the alt allele frequency for donor k at locus l',
+   what:'Weighted average of observed allele frequencies across cells',
+   how:'The MLE update is: θ_kl = (Σ_n p̃_nk · alt_nl) / (Σ_n p̃_nk · total_nl). Each cell contributes to cluster k\'s estimate proportional to its soft membership p̃_nk. Cells far from cluster k have p̃_nk ≈ 0 and contribute little.',
+   formula:`<span class="cmt">// Numerator: weighted alt count</span>
+num_kl = Σ_n p̃_nk × alt_nl     <span class="cmt">O(N·D)</span>
+<span class="cmt">// Denominator: weighted total count</span>
+den_kl = Σ_n p̃_nk × total_nl   <span class="cmt">O(N·D)</span>
+<span class="sym">θ_kl</span>  = num_kl / den_kl`,
+   insight:'The weighted average is exactly the MLE of the Binomial parameter. When all p̃_nk ∈ {0,1} (hard assignments), this reduces to the simple sample mean — which is what K-means computes.'},
+  {why:'θ=0 means log(θ)=-∞ and θ=1 means log(1-θ)=-∞ — numerical explosion',
+   what:'Laplace pseudocounts prevent θ from reaching 0 or 1',
+   how:'Add ψ_alt to the numerator and ψ_total to the denominator before dividing. Default: ψ_alt=1.0, ψ_total=2.0. This is equivalent to a Beta(ψ_alt, ψ_total-ψ_alt) = Beta(1,1) = Uniform prior — the most uninformative smoothing.',
+   formula:`<span class="sym">θ_kl</span> = (num_kl + <span class="val">ψ_alt</span>) / (den_kl + <span class="val">ψ_total</span>)
+<span class="cmt">// ψ_alt=1, ψ_total=2 → Beta(1,1) prior</span>
+<span class="cmt">// With 0 observations: θ = 1/2 (uniform prior)</span>
+<span class="cmt">// With many observations: prior is overwhelmed</span>`,
+   insight:'The pseudocounts matter most for loci with very few reads. Without them, a locus with only ref reads would get θ=0, making log(θ)=-∞ and causing NaN propagation throughout.'},
+  {why:'Even with pseudocounts, floating-point operations can push θ slightly outside bounds',
+   what:'Clamping θ to [θ_min, θ_max] after the M-step',
+   how:'After computing θ_kl, apply: θ_kl = max(θ_min, min(θ_max, θ_kl)). Default bounds: [0.01, 0.99]. This also applies to the known_genotypes VCF initialisation, ensuring imported allele frequencies are in-range.',
+   formula:`<span class="sym">θ_kl</span> ← clamp(<span class="sym">θ_kl</span>, <span class="val">θ_min</span>, <span class="val">θ_max</span>)
+<span class="cmt">// Configurable: --theta_min, --theta_max</span>
+<span class="cmt">// v2.4: hardcoded 0.01, 0.99</span>`,
+   insight:'The bounds also prevent degenerate solutions where one cluster "captures" all cells and another becomes empty. With θ_min=0.01, even an unoccupied cluster has a sensible starting frequency for the next iteration.'},
+  {why:'The M-step loop is O(N·D·K) — same as the E-step, fused into one pass',
+   what:'Accumulated sums are reset per temperature step, not per iteration',
+   how:'The accumulators num[K][L] and den[K][L] are zeroed at the start of each temperature step. Then the full N-cell loop accumulates all contributions. The final θ update is O(K·L). The loop structure is: for step → for iter → for cell → E+M fused.',
+   formula:`<span class="cmt">// Pseudocode of the inner loop:</span>
+for step in 0..S:
+  zero(num); zero(den)   <span class="cmt">O(K·L)</span>
+  for iter in 0..I:
+    for cell in cells:   <span class="cmt">O(N·D·K)</span>
+      E_step_and_accumulate(cell, θ, num, den)
+  update_θ(num, den)     <span class="cmt">O(K·L)</span>`,
+   insight:'Zeroing the accumulators per temperature step (not per iteration) is a key optimisation. Resetting only once per step means the K·L zero-fill cost is amortised over I iterations.'},
+]);
+function updatePseudo(){
+  const alt=parseInt(document.getElementById('ps-alt').value);
+  const tot=parseInt(document.getElementById('ps-tot').value);
+  document.getElementById('ps-alt-raw').textContent=alt;
+  document.getElementById('ps-tot-raw').textContent=tot;
+  const pA=1,pT=2;
+  const theta_raw=tot===0?0:alt/tot;
+  const theta_smooth=(alt+pA)/(tot+pT);
+  const theta_min=0.01,theta_max=0.99;
+  const theta_clamped=Math.max(theta_min,Math.min(theta_max,theta_smooth));
+  const r=document.getElementById('ps-result');
+  r.innerHTML=`<span style="color:var(--ink4)">Raw MLE:  </span><span style="color:var(--red)">${theta_raw.toFixed(4)}</span>${alt===0||alt===tot?' ⚠ boundary!':''}<br/>
+<span style="color:var(--ink4)">+ pseudocounts (ψ_alt=1, ψ_total=2):  </span><span style="color:var(--amber)">(${alt}+1)/(${tot}+2) = <strong>${theta_smooth.toFixed(4)}</strong></span><br/>
+<span style="color:var(--ink4)">Clamped to [0.01, 0.99]:  </span><span style="color:var(--green)"><strong>θ_final = ${theta_clamped.toFixed(4)}</strong></span><br/>
+<span style="color:var(--ink4)">log(θ):  </span><span style="color:var(--cyan)">${Math.log(theta_clamped).toFixed(4)}</span>
+<span style="color:var(--ink4)">  log(1-θ):  </span><span style="color:var(--cyan)">${Math.log(1-theta_clamped).toFixed(4)}</span>`;
+}
+updatePseudo();
+
+// ═══════════════════════════════════════════════
+// §10 KHM WIZARD + VIZ
+// ═══════════════════════════════════════════════
+buildWizard('khm-steps','khm-nav','khm-ctr',[
+  {why:'EM can get stuck in local optima when K is large and initialisation is poor',
+   what:'KHM replaces the softmax with a harmonic-mean membership function',
+   how:'For each cell-cluster distance d_nk = -log P(cell_n | k): q_nk = (1/d_nk)^p. Normalise: w_nk = q_nk / Σ_j q_nj. High p means weight concentrates sharply on the nearest cluster. The M-step is identical to EM.',
+   formula:`<span class="cmt">// KHM membership (instead of EM softmax):</span>
+d_nk = −log P(cell_n | cluster_k)  <span class="cmt">distance</span>
+q_nk = (1/d_nk)^p                   <span class="cmt">harmonic weight</span>
+w_nk = q_nk / Σ_j q_nj              <span class="cmt">normalise</span>`,
+   insight:'KHM\'s Q-function is not derived from a probabilistic model — it is a heuristic that works well empirically. Unlike EM, it has no formal convergence guarantee, but in practice it converges faster for large K.'},
+  {why:'The harmonic exponent p controls how "decisive" the membership is',
+   what:'KHM p — the key hyperparameter',
+   how:'Low p (≈1): membership is nearly uniform — very exploratory, slow convergence. p=25 (default): membership is sharply peaked around the nearest cluster. High p (>50): nearly hard assignment — fast but fragile to poor initialisation.',
+   formula:`<span class="cmt">// Effect of p on membership for two clusters:</span>
+p=1:  w_n1 = 0.45, w_n2 = 0.55  (soft)
+p=10: w_n1 = 0.12, w_n2 = 0.88  (moderate)
+p=25: w_n1 = 0.01, w_n2 = 0.99  (sharp)
+p=100:w_n1 ≈ 0,   w_n2 ≈ 1     (hard)`,
+   insight:'The p=25 default provides a good balance. Increase to 50+ for very clean data with well-separated clusters. Decrease to 10 for noisy data or overlapping donors.'},
+  {why:'KHM and EM have the same asymptotic complexity but different constant factors',
+   what:'O(S·I·N·D·K) — identical to EM',
+   how:'The Q-function computation replaces the softmax: O(K) exp() → O(K) pow() operations. pow() is slightly more expensive than exp() on most hardware (2–3 cycles vs 1–2 cycles). The M-step is mathematically identical.',
+   formula:`<span class="cmt">// Complexity comparison:</span>
+EM:  T = <span class="val">O(S·I·N·D·K)</span>  const≈1.0×
+KHM: T = <span class="val">O(S·I·N·D·K)</span>  const≈1.1–1.2×
+<span class="cmt">// KHM runs hotter: base_khm=0.5 vs base_em=20</span>
+<span class="cmt">// So KHM typically uses more iterations per step</span>`,
+   insight:'KHM\'s slightly higher constant factor per iteration is offset by typically needing fewer iterations per temperature step to converge, because the sharp membership function accelerates cluster separation.'},
+  {why:'When should you choose KHM over EM?',
+   what:'KHM is recommended for K ≥ 8 or when convergence stability is low',
+   how:'Use --clustering_method khm when: (1) k ≥ 8 and convergence stability (% restarts at global optimum) is below 70%; (2) you see many restarts at very different log-likelihoods; (3) the data has poorly separated donors. EM is the default for its formal guarantees.',
+   formula:`<span class="cmt">// Decision rule:</span>
+if K >= 8 and stability < 70%: use KHM
+if known_genotypes available:  use EM (fast convergence)
+if K <= 4:                     use EM (default)`,
+   insight:'The best practice is to run both and compare the HTML report convergence plots. If KHM shows higher stability and similar or better log-likelihood, switch to KHM for production runs.'},
+]);
+function drawKHM(){
+  const p=parseInt(document.getElementById('khm-p').value);
+  document.getElementById('khm-p-val').textContent=p;
+  const canvas=document.getElementById('khm-canvas');
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||600;
+  const H=parseInt(canvas.getAttribute('height'))||180;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle='#080E1A';ctx.fillRect(0,0,W,H);
+  // Grid
+  ctx.strokeStyle='rgba(30,46,68,0.8)';ctx.lineWidth=1;
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const y=H-30-f*(H-50);
+    ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(W-10,y);ctx.stroke();
+    ctx.fillStyle='rgba(96,112,128,0.6)';ctx.font='9px monospace';
+    ctx.textAlign='right';ctx.fillText((f*100).toFixed(0)+'%',36,y+3);
+  });
+  const K=4;
+  const distances=[1,1.8,4.5,9];
+  const labels=['K1 (nearest)','K2','K3','K4 (farthest)'];
+  const colors=['#22D3EE','#7C5CEF','#22C55E','#F0A500'];
+  const weights=distances.map(d=>Math.pow(1/d,p));
+  const sum=weights.reduce((a,b)=>a+b,0);
+  const norm=weights.map(w=>w/sum);
+  const bw=(W-60)/K;
+  const maxH=H-50;
+  norm.forEach((w,k)=>{
+    const h=Math.max(2,w*maxH);
+    const x=40+k*bw;
+    const y=H-30-h;
+    // Gradient bar
+    const grad=ctx.createLinearGradient(0,y,0,H-30);
+    grad.addColorStop(0,colors[k]+'CC');
+    grad.addColorStop(1,colors[k]+'33');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    // roundRect polyfill (not available in all browsers)
+    const rx2=4, x2=x+8, y2=y, w2=bw-16, h2=h;
+    ctx.beginPath();
+    ctx.moveTo(x2+rx2, y2);
+    ctx.lineTo(x2+w2-rx2, y2);
+    ctx.quadraticCurveTo(x2+w2, y2, x2+w2, y2+rx2);
+    ctx.lineTo(x2+w2, y2+h2-rx2);
+    ctx.quadraticCurveTo(x2+w2, y2+h2, x2+w2-rx2, y2+h2);
+    ctx.lineTo(x2+rx2, y2+h2);
+    ctx.quadraticCurveTo(x2, y2+h2, x2, y2+h2-rx2);
+    ctx.lineTo(x2, y2+rx2);
+    ctx.quadraticCurveTo(x2, y2, x2+rx2, y2);
+    ctx.closePath();
+    ctx.fill();
+    // Percentage label on top
+    ctx.fillStyle=colors[k];
+    ctx.font=`bold ${Math.max(10,Math.min(14,bw/5))}px monospace`;
+    ctx.textAlign='center';
+    ctx.fillText((w*100).toFixed(1)+'%',x+bw/2,y-6);
+    // X axis label
+    ctx.fillStyle='rgba(96,112,128,0.8)';
+    ctx.font='9px monospace';
+    ctx.fillText(labels[k],x+bw/2,H-14);
+    ctx.fillText(`d=${distances[k]}`,x+bw/2,H-4);
+  });
+  // Axis line
+  ctx.strokeStyle='rgba(30,46,68,1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(40,H-30);ctx.lineTo(W-10,H-30);ctx.stroke();
+  const best=norm.indexOf(Math.max(...norm));
+  const d=document.getElementById('khm-interp');
+  d.textContent=`With p=${p}: ${labels[best]} captures ${(norm[best]*100).toFixed(1)}% of membership. ${p<5?'Nearly uniform — very exploratory, needs many iterations.':p<15?'Moderate sharpness — balanced exploration.':p<40?'Sharp assignment — fast convergence, close to K-means hard assignment.':'Near-hard assignment — very fast but highly sensitive to poor initialisation.'}`;
+}
+drawKHM();
+document.getElementById('khm-p').oninput=drawKHM;
+
+// ═══════════════════════════════════════════════
+// §11 PARALLEL WIZARD + AMDAHL
+// ═══════════════════════════════════════════════
+buildWizard('par-steps','par-nav','par-ctr',[
+  {why:'EM restarts are completely independent — no shared state during clustering',
+   what:'Embarrassingly parallel — the ideal case for multi-threading',
+   how:'Each restart has its own: random seed (derived from global seed + thread index), θ matrix, log_probs array, convergence state. There is zero inter-thread communication during the clustering loop. This is the best possible parallelism scenario.',
+   formula:`<span class="cmt">// Parallel speedup (ideal, embarrassingly parallel):</span>
+<span class="sym">T_parallel</span> = T_serial / T
+<span class="sym">Efficiency</span> = 100%  (ignoring overhead)
+<span class="cmt">// In practice: 95–98% efficiency (Amdahl serial fraction ≈ 2%)</span>`,
+   insight:'Rayon\'s work-stealing scheduler means that if one thread finishes its ⌈R/T⌉ restarts early (due to faster convergence), it can steal work from slower threads — providing automatic load balancing.'},
+  {why:'We need all threads to start with different random initial conditions',
+   what:'Deterministic per-thread seeding from the global seed',
+   how:'The global StdRng is seeded from --seed. For each of T threads, one 32-byte seed is generated from the global RNG. Each thread gets its own StdRng seeded from its unique seed. This ensures: (a) same --seed → same result, (b) each thread explores different restart landscape.',
+   formula:`<span class="cmt">// Seed derivation:</span>
+global_rng  ← StdRng::from_seed(expand64(user_seed))
+thread_seeds← [global_rng.gen::<[u8;32]>(); T]
+thread_rng_t ← StdRng::from_seed(thread_seeds[t])`,
+   insight:'Changing --threads changes the per-thread seeds and therefore the results, even with the same --seed. This is by design — there is no way to have both thread-count independence and exact reproducibility simultaneously.'},
+  {why:'The merge step must find the globally best solution across all threads',
+   what:'O(T·N·K) merge — compare T best solutions',
+   how:'After all threads complete: collect the T best (loss, log_probs, θ) solutions. The global best is the one with the highest total log-likelihood. The merge is O(T) comparisons of scalar values, plus a single O(N·K) copy of the winning log_probs.',
+   formula:`<span class="cmt">// Merge step:</span>
+for t in 0..T:
+  if thread_t.best_loss > global_best:
+    global_best = thread_t.best_loss   <span class="cmt">O(1)</span>
+    global_log_probs = thread_t.log_probs  <span class="cmt">O(N·K)</span>
+<span class="sym">T_merge</span> = <span class="val">O(T·N·K)</span>  <span class="cmt">≪ T_cluster</span>`,
+   insight:'The merge step is negligible: O(T·N·K) = O(8×5000×4) = 160,000 operations vs O(R·S·I·N·D·K/T) ≈ 2 billion. The merge is 0.008% of total runtime.'},
+  {why:'Even perfect parallelism has a ceiling set by the serial fraction',
+   what:'Amdahl\'s law — the fundamental limit of parallel speedup',
+   how:'If fraction f_serial of work is serial (data loading, merge), then max speedup = 1 / (f_serial + (1-f_serial)/T). For f_serial=0.02 and T=8: speedup = 1/(0.02+0.12) = 7.1×. Diminishing returns above T≈16.',
+   formula:`<span class="sym">Speedup</span>(T) = 1 / (f_s + (1−f_s)/T)
+f_s ≈ 0.02  <span class="cmt">(data load + merge ≈ 2% of runtime)</span>
+T=1:  1.0×  | T=4:  3.7×  | T=8:  7.1×
+T=16: 11.8× | T=32: 17.2× | T→∞: 50×`,
+   insight:'The ~2% serial fraction caps the theoretical speedup at 50×. Adding more than 16–32 threads gives diminishing returns. The actual speedup is close to T for T ≤ R (you can\'t have more threads than restarts).'},
+]);
+function drawAmdahl(){
+  const T=parseInt(document.getElementById('amdahl-t').value);
+  const curS=1/(0.02+0.98/T);
+  document.getElementById('amdahl-val').textContent=`T=${T} → speedup=${curS.toFixed(2)}×`;
+  const canvas=document.getElementById('amdahl-canvas');
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||600;
+  const H=parseInt(canvas.getAttribute('height'))||200;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle='#080E1A';ctx.fillRect(0,0,W,H);
+  const PAD={l:46,r:20,t:20,b:30};
+  const PW=W-PAD.l-PAD.r, PH=H-PAD.t-PAD.b;
+  const maxT=32,maxS=20;
+  const toX=t=>PAD.l+(t/maxT)*PW;
+  const toY=s=>PAD.t+PH-(s/maxS)*PH;
+  // Grid
+  ctx.strokeStyle='rgba(30,46,68,0.8)';ctx.lineWidth=1;
+  [0,4,8,12,16,20].forEach(s=>{
+    const y=toY(s);
+    ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(PAD.l+PW,y);ctx.stroke();
+    ctx.fillStyle='rgba(96,112,128,0.7)';ctx.font='9px monospace';
+    ctx.textAlign='right';ctx.fillText(s+'×',PAD.l-4,y+3);
+  });
+  [0,8,16,24,32].forEach(t=>{
+    const x=toX(t);
+    ctx.beginPath();ctx.moveTo(x,PAD.t);ctx.lineTo(x,PAD.t+PH);ctx.stroke();
+    ctx.fillStyle='rgba(96,112,128,0.7)';ctx.font='9px monospace';
+    ctx.textAlign='center';ctx.fillText(t+'T',x,H-4);
+  });
+  // Ideal line (dashed)
+  ctx.strokeStyle='rgba(30,46,68,1)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(toX(0),toY(0));ctx.lineTo(toX(maxT),toY(Math.min(maxT,maxS)));ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(30,46,68,1)';ctx.font='9px monospace';ctx.textAlign='left';
+  ctx.fillText('Ideal',toX(16)+4,toY(16)-4);
+  // Max speedup ceiling
+  const maxSpeedup=50;
+  ctx.strokeStyle='rgba(239,68,68,0.3)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+  ctx.beginPath();ctx.moveTo(PAD.l,toY(Math.min(maxSpeedup,maxS)));
+  ctx.lineTo(PAD.l+PW,toY(Math.min(maxSpeedup,maxS)));ctx.stroke();
+  ctx.setLineDash([]);
+  // Amdahl curve fill
+  ctx.beginPath();
+  ctx.moveTo(toX(1),toY(0));
+  for(let t=1;t<=maxT;t++){
+    const s=1/(0.02+0.98/t);
+    ctx.lineTo(toX(t),toY(Math.min(s,maxS)));
+  }
+  ctx.lineTo(toX(maxT),toY(0));ctx.closePath();
+  const grad=ctx.createLinearGradient(0,PAD.t,0,PAD.t+PH);
+  grad.addColorStop(0,'rgba(34,211,238,0.25)');
+  grad.addColorStop(1,'rgba(34,211,238,0.02)');
+  ctx.fillStyle=grad;ctx.fill();
+  // Amdahl curve stroke
+  ctx.beginPath();ctx.strokeStyle='#22D3EE';ctx.lineWidth=2.5;
+  for(let t=1;t<=maxT;t++){
+    const s=1/(0.02+0.98/t);
+    if(t===1)ctx.moveTo(toX(t),toY(Math.min(s,maxS)));
+    else ctx.lineTo(toX(t),toY(Math.min(s,maxS)));
+  }
+  ctx.stroke();
+  // Current T vertical line
+  ctx.strokeStyle='rgba(124,92,239,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(toX(T),PAD.t);ctx.lineTo(toX(T),toY(0));ctx.stroke();
+  ctx.setLineDash([]);
+  // Current T dot
+  const dotY=toY(Math.min(curS,maxS));
+  const glowG=ctx.createRadialGradient(toX(T),dotY,0,toX(T),dotY,16);
+  glowG.addColorStop(0,'rgba(124,92,239,0.6)');glowG.addColorStop(1,'transparent');
+  ctx.beginPath();ctx.arc(toX(T),dotY,16,0,Math.PI*2);ctx.fillStyle=glowG;ctx.fill();
+  ctx.beginPath();ctx.arc(toX(T),dotY,7,0,Math.PI*2);
+  ctx.fillStyle='#7C5CEF';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  // Label
+  const lx=toX(T)+(T>24?-80:10);
+  ctx.fillStyle='#E8EEF8';ctx.font='bold 11px monospace';ctx.textAlign='left';
+  ctx.fillText(`T=${T}: ${curS.toFixed(1)}×`,lx,dotY-10);
+  // Axis labels
+  ctx.fillStyle='rgba(96,112,128,0.6)';ctx.font='9px monospace';
+  ctx.textAlign='center';ctx.fillText('Threads (T)',PAD.l+PW/2,H);
+  ctx.save();ctx.translate(10,PAD.t+PH/2);ctx.rotate(-Math.PI/2);
+  ctx.fillText('Speedup',0,0);ctx.restore();
+}
+drawAmdahl();
+document.getElementById('amdahl-t').oninput=drawAmdahl;
+
+// ═══════════════════════════════════════════════
+// §12 PRIMITIVES WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('prim-steps','prim-nav','prim-ctr',[
+  {why:'The hot path function — called 84 million times per run',
+   what:'binomial_loss_with_min_index — O(D·K) per cell',
+   how:'For each covered locus in the cell: compute alt×ln(θ_kl) + ref×ln(1-θ_kl) for all K clusters simultaneously. Track the minimum-distance cluster index. Returns (losses[K], min_index). ln(θ) lookups hit L1 cache 99% of the time due to sequential θ access.',
+   formula:`for l in cell.loci:  <span class="cmt">D iterations</span>
+  for k in 0..K:   <span class="cmt">K = 4 typically</span>
+    loss[k] += alt[l]×ln(θ[k][l]) + ref[l]×ln(1−θ[k][l])
+<span class="sym">T</span> = <span class="val">O(D·K)</span>  <span class="cmt">= 200 FMAs for D=50, K=4</span>`,
+   insight:'SIMD vectorisation of the K-loop would be the highest-impact optimisation: process 4 clusters simultaneously using 128-bit SIMD. Expected speedup: 3–4×. The inner loop has no data dependencies between K iterations — ideal for vectorisation.'},
+  {why:'Exponentiating K large negative numbers risks underflow',
+   what:'log_sum_exp — numerically stable reduction of K values',
+   how:'1. Find max value m. 2. Compute Σ exp(x_k - m). 3. Return m + ln(sum). This is mathematically equivalent to ln(Σ exp(x_k)) but prevents exp() underflow when all x_k are very negative (e.g. -250,000).',
+   formula:`m   = max(x_0, ..., x_{K-1})    <span class="cmt">O(K)</span>
+sum = Σ_k exp(x_k − m)        <span class="cmt">O(K)</span>
+lse = m + ln(sum)             <span class="cmt">O(1)</span>
+<span class="cmt">// Used in E-step normalisation + convergence check</span>`,
+   insight:'f32 can represent exp() results down to exp(-89) ≈ 4e-39 before underflow. Log-probabilities of -250,000 are 2,800× below the underflow threshold. Without max subtraction, the result would always be 0/0 = NaN.'},
+  {why:'Allele frequencies θ must be positive and <1 for log to be defined',
+   what:'Laplace pseudocount + θ clamping — O(K·L) per M-step update',
+   how:'After accumulating weighted counts: θ_kl = (num_kl + ψ_alt) / (den_kl + ψ_total). Then clamp to [θ_min, θ_max]. The clamp uses f32::max() and f32::min() — 2 CPU instructions, completely negligible.',
+   formula:`θ_kl = (num + ψ_alt) / (den + ψ_total)  <span class="cmt">O(1) per (k,l)</span>
+θ_kl = max(θ_min, min(θ_max, θ_kl))   <span class="cmt">O(1) clamp</span>
+<span class="sym">T_total</span> = <span class="val">O(K·L)</span>  <span class="cmt">called once per temperature step</span>`,
+   insight:'The pseudocounts are fully configurable in v3.0 (ψ_alt=1, ψ_total=2 default). Increasing them adds stronger regularisation — useful when some clusters have very few cells and noisy θ estimates.'},
+  {why:'The binomial coefficient ln C(n,k) is needed for every cell-locus-cluster triple',
+   what:'Precomputed ln C(n,k) — amortised O(1) per EM lookup',
+   how:'At load time: for each (cell, locus) pair with total_reads = n and alt_reads = k, compute ln C(n,k) = ln(n!) - ln(k!) - ln((n-k)!) using the statrs library. Store alongside (locus_idx, alt, ref) in CellData. Cost: O(N·D·max_reads) once. Lookup: O(1) per EM call.',
+   formula:`<span class="cmt">// Precomputation (once at load):</span>
+for cell in cells:
+  for (l,alt,ref) in cell.loci:
+    cell.loci[l].ln_binom = ln_C(alt+ref, alt)
+<span class="sym">T_precompute</span> = <span class="val">O(N·D)</span>
+<span class="sym">T_per_EM_call</span> = <span class="val">O(1)</span> lookup (amortised R·S·I times)`,
+   insight:'Amortised over R=100, S=9, I=15 iterations: the precomputation pays for itself after the first iteration of the first restart. For 1350 total iterations: 1350× amortisation factor.'},
+]);
+
+// ═══════════════════════════════════════════════
+// §14 FORMULA REVEAL
+// ═══════════════════════════════════════════════
+const FORMULA_TERMS=[
+  {sym:'T_total',eq:'=',val:'T_load',cmt:'O(N·D)  ← data loading'},
+  {sym:'',eq:'+',val:'T_qc',cmt:'O(L₀)   ← locus filtering'},
+  {sym:'',eq:'+',val:'T_init',cmt:'O(K·L)  ← per restart'},
+  {sym:'',eq:'+',val:'T_cluster',cmt:'O(R·S·I·N·D·K / T)  ← DOMINANT'},
+  {sym:'',eq:'+',val:'T_merge',cmt:'O(T·N·K) ← merge threads'},
+  {sym:'',eq:'+',val:'T_output',cmt:'O(N)    ← write TSV'},
+  {sym:'',eq:'≈',val:'O(R·S·I·N·D·K / T)',cmt:'← total complexity'},
+];
+let formulaStep=0;
+function buildFormulaHTML(){
+  const container=document.getElementById('full-formula');
+  container.innerHTML='';
+  FORMULA_TERMS.forEach((t,i)=>{
+    const line=document.createElement('div');line.className='f-line';
+    line.innerHTML=`
+      <span class="f-term f-sym" style="min-width:80px">${t.sym}</span>
+      <span class="f-term f-eq">${t.eq}</span>
+      <span class="f-term f-val">${t.val}</span>
+      <span class="f-term f-cmt">${t.cmt}</span>`;
+    container.appendChild(line);
+  });
+  formulaStep=0;
+}
+buildFormulaHTML();
+function revealFormula(){
+  const terms=document.querySelectorAll('#full-formula .f-term');
+  if(formulaStep===0){
+    // Reveal all rows one by one
+    FORMULA_TERMS.forEach((_,i)=>{
+      const rowTerms=Array.from(document.querySelectorAll(`#full-formula .f-line:nth-child(${i+1}) .f-term`));
+      rowTerms.forEach(t=>{
+        setTimeout(()=>t.classList.add('revealed'),i*300);
+      });
+    });
+    formulaStep=1;
+    document.getElementById('formula-btn').textContent='↺ Reset';
+  } else {
+    terms.forEach(t=>t.classList.remove('revealed'));
+    formulaStep=0;
+    document.getElementById('formula-btn').textContent='▶ Reveal formula';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// §15 OPTIMISATION WIZARD
+// ═══════════════════════════════════════════════
+buildWizard('opt-steps','opt-nav','opt-ctr',[
+  {why:'binomial_loss_with_min_index accounts for >80% of runtime',
+   what:'SIMD vectorisation of the K-loop — expected 3–4× speedup',
+   how:'The inner loop over K=4 clusters has no data dependencies and operates on f32 arrays. Using std::simd (nightly) or the packed_simd crate: process 4 clusters with a single 128-bit FMA instruction instead of 4 scalar FMAs. Compatible with x86 SSE4.1 and ARM NEON.',
+   formula:`<span class="cmt">// Current: scalar</span>
+for k in 0..4: loss[k] += alt×ln(θ[k][l]) + ref×ln(1−θ[k][l])
+<span class="cmt">// SIMD: 1 instruction for all K=4</span>
+loss_vec += alt_scalar × ln(θ_vec[l]) + ref_scalar × ln(1−θ_vec[l])
+<span class="cmt">// Speedup: 3–4× on the hot path → 2.5–3× overall</span>`,
+   insight:'This is the single highest-impact optimisation available. It requires no algorithmic changes — only replacing the scalar loop with SIMD intrinsics. The compiler may already auto-vectorise this with -C target-cpu=native.'},
+  {why:'normalize_in_log_with_temp allocates a Vec every cell every iteration',
+   what:'Thread-local buffer for softmax — eliminate 675K allocations per run',
+   how:'Declare a thread_local! Vec<f32> of length K. Reuse it across all cells and iterations within a thread. The current per-cell allocation is: alloc K×4 bytes + memset + dealloc = ~20ns overhead. Total: 675,000 × 20ns = 13.5ms wasted per run.',
+   formula:`<span class="cmt">// Current (allocates per cell):</span>
+let p = normalize_with_temp(&log_probs, tau)  // Vec<f32>
+<span class="cmt">// Optimised (reuse buffer):</span>
+thread_local! { static BUF: RefCell<Vec<f32>> = RefCell::new(vec![0.0;K]); }
+BUF.with(|b| normalize_into(&log_probs, tau, &mut b.borrow_mut()))`,
+   insight:'13.5ms sounds small but represents ~2–5% of total runtime for a fast run. More importantly, this reduces GC pressure and improves CPU cache utilisation by eliminating heap fragmentation.'},
+  {why:'ref.mtx and alt.mtx are read sequentially — both are I/O bound',
+   what:'Concurrent matrix loading on two threads — expected 1.5–2× loading speedup',
+   how:'Spawn two threads, one per matrix file. Both threads read and parse simultaneously. Synchronise after both complete. Requires two independent BufReaders and two Vecs for pass-1 statistics, merged after both threads finish.',
+   formula:`<span class="cmt">// Current: sequential</span>
+T_load = T_ref + T_alt = 2 × O(N·D)
+<span class="cmt">// Parallel: concurrent I/O</span>
+T_load = max(T_ref, T_alt) = O(N·D)  <span class="cmt">1.5–2× faster</span>`,
+   insight:'On NVMe SSDs with 3+ GB/s bandwidth, two concurrent file reads are served from different channels simultaneously. On spinning disks this would hurt (seek contention), but modern machines invariably have SSDs for this kind of work.'},
+  {why:'The current O(N·D) pass 2 reprocesses loci that will be discarded by QC',
+   what:'Fused QC + CellData construction — eliminate one full matrix re-read',
+   how:'Currently: Pass 1 collects stats, QC filters, Pass 2 re-reads the whole file to build CellData. Optimisation: in Pass 1, buffer entries for loci that might pass QC (e.g. any locus with ≥1 ref read). After filtering, build CellData from buffer without re-reading the file.',
+   formula:`<span class="cmt">// Current: 3 passes (2×matrix + QC)</span>
+T = O(N·D) + O(L₀) + O(N·D) = O(N·D)
+<span class="cmt">// Optimised: 1 pass + QC</span>
+T = O(N·D) + O(L₀) = O(N·D)  <span class="cmt">constant factor 1.5×</span>`,
+   insight:'This is a pure implementation optimisation — no algorithmic change. The buffer adds O(N·D) memory overhead but saves one full sequential file read, which is the I/O bottleneck on large datasets.'},
+  {why:'K-means++ provides a provably better starting point than random_uniform',
+   what:'K-means++ initialisation — reduce required restarts from 100 to ~10',
+   how:'Select first centre uniformly at random. Then iteratively: compute distance d(cell, nearest_centre) for all cells; select next centre with probability proportional to d². Repeat K times. Expected: O(log K) approximation to optimal, requiring far fewer restarts.',
+   formula:`<span class="cmt">// K-means++ initialisation:</span>
+T_init = O(K · N · D)  <span class="cmt">K rounds × N cells × D loci</span>
+<span class="cmt">// But restarts drop from R=100 to R≈10:</span>
+T_cluster ≈ T_cluster / 10
+<span class="cmt">// Net effect: ~5× overall speedup</span>`,
+   insight:'The challenge is defining the distance metric in allele-fraction space. The natural choice is negative log-likelihood: d(cell, centre) = −log P(cell | θ_centre), which maps directly to binomial_loss_with_min_index. This is the highest-impact algorithmic optimisation.'},
+]);
+
+// Auto-animate pipeline on load
+setTimeout(()=>{
+  if(document.getElementById('ps0')){animatePipeline();}
+},1500);
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>

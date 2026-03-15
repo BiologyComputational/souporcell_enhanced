@@ -1,0 +1,31 @@
+{
+  "profile": "high_convergence",
+  "description": "Aggressive restarts for sparse SNP coverage where convergence < 70%. Use when loci pass rate < 5% or convergence stability fails.",
+  "params": {
+    "restarts": 500,
+    "seed": 42,
+    "threads": 8,
+    "clustering_method": "em",
+    "initialization_strategy": "random_uniform",
+    "souporcell3": false,
+    "min_alt": 2,
+    "min_ref": 2,
+    "min_alt_umis": 0,
+    "min_ref_umis": 0,
+    "verbose": false,
+    "progress_interval": 500,
+    "plots": "all",
+    "cleanup": false,
+    "anneal_steps": 9,
+    "anneal_base_em": 20.0,
+    "anneal_base_khm": 0.5,
+    "conv_tol": 0.005,
+    "max_iter": 2000,
+    "min_cluster_cells": 100,
+    "pseudocount_alt": 1.0,
+    "pseudocount_total": 2.0,
+    "theta_min": 0.01,
+    "theta_max": 0.99,
+    "khm_p": 25.0
+  }
+}

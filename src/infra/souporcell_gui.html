@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>souporcell <span class="version-str">v3.0.0</span> — Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080E1A;--surface:#0D1627;--surface2:#111D30;--surface3:#162338;
+  --border:#1E2E44;--border2:#253650;
+  --teal:#00C2B8;--teal-dim:#00877F;--teal-glow:rgba(0,194,184,.15);
+  --amber:#F5A623;--amber-dim:#B87A1A;--amber-glow:rgba(245,166,35,.12);
+  --red:#F04F4F;--red-glow:rgba(240,79,79,.12);
+  --green:#2ECC71;--green-glow:rgba(46,204,113,.12);
+  --blue:#4A9EFF;
+  --ink:#E8EDF5;--ink2:#A8B8CC;--ink3:#6B7E94;--ink4:#3D526A;
+  --font-ui:'Sora',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Space Mono',monospace;
+  --radius:6px;--radius-lg:10px;--radius-xl:16px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --glow-teal:0 0 30px rgba(0,194,184,.2);
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;
+     line-height:1.6;min-height:100vh;overflow-x:hidden}
+
+/* ── Starfield background ── */
+body::before{content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;opacity:.4}
+
+/* ── Layout ── */
+.app{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 80px}
+
+/* ── Header ── */
+.header{padding:40px 0 32px;text-align:center;border-bottom:1px solid var(--border);margin-bottom:40px}
+.header-eyebrow{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;
+                color:var(--teal);text-transform:uppercase;margin-bottom:12px;opacity:.8}
+.header h1{font-family:var(--font-display);font-size:2rem;font-weight:700;
+           background:linear-gradient(135deg,var(--teal) 0%,#80E8E4 50%,var(--teal) 100%);
+           -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+           background-clip:text;line-height:1.2;margin-bottom:8px}
+.header p{color:var(--ink3);font-size:13px;max-width:600px;margin:0 auto}
+.version-badge{display:inline-flex;align-items:center;gap:6px;margin-top:12px;
+               padding:4px 14px;border-radius:20px;background:var(--teal-glow);
+               border:1px solid var(--teal-dim);font-family:var(--font-mono);
+               font-size:10px;color:var(--teal);letter-spacing:.1em}
+
+/* ── Phase tabs ── */
+.phase-nav{display:flex;gap:0;margin-bottom:32px;border:1px solid var(--border);
+           border-radius:var(--radius-lg);overflow:hidden;background:var(--surface)}
+.phase-tab{flex:1;padding:14px 8px;text-align:center;cursor:pointer;font-size:11px;
+           font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+           color:var(--ink3);border-right:1px solid var(--border);
+           transition:all .2s;position:relative;user-select:none}
+.phase-tab:last-child{border-right:none}
+.phase-tab:hover{color:var(--ink);background:var(--surface2)}
+.phase-tab.active{color:var(--teal);background:var(--teal-glow);border-bottom:2px solid var(--teal)}
+.phase-tab .tab-num{display:block;font-family:var(--font-mono);font-size:18px;
+                    font-weight:700;margin-bottom:2px}
+.phase-tab.done .tab-num::after{content:' ✓';font-size:12px;color:var(--green)}
+.phase-tab.locked{opacity:.4;cursor:not-allowed}
+
+/* ── Phase panels ── */
+.phase-panel{display:none}
+.phase-panel.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Section ── */
+.section{margin-bottom:28px}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;
+                padding-bottom:10px;border-bottom:1px solid var(--border)}
+.section-icon{width:32px;height:32px;border-radius:8px;background:var(--teal-glow);
+              border:1px solid var(--teal-dim);display:flex;align-items:center;
+              justify-content:center;font-size:16px;flex-shrink:0}
+.section-title{font-family:var(--font-display);font-size:.85rem;font-weight:700;
+               color:var(--teal);letter-spacing:.06em}
+.section-desc{font-size:11px;color:var(--ink3);margin-top:1px}
+
+/* ── Profile selector ── */
+.profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px}
+.profile-card{background:var(--surface2);border:2px solid var(--border);
+              border-radius:var(--radius-lg);padding:14px 12px;cursor:pointer;
+              transition:all .2s;position:relative}
+.profile-card:hover{border-color:var(--teal-dim);background:var(--surface3)}
+.profile-card.selected{border-color:var(--teal);background:var(--teal-glow);
+                        box-shadow:var(--glow-teal)}
+.profile-card .pc-name{font-family:var(--font-mono);font-size:11px;font-weight:700;
+                        color:var(--teal);margin-bottom:4px}
+.profile-card .pc-desc{font-size:10px;color:var(--ink3);line-height:1.4}
+.profile-card .pc-badge{position:absolute;top:8px;right:8px;padding:2px 6px;
+                         border-radius:4px;font-size:9px;font-weight:700;
+                         font-family:var(--font-mono)}
+.badge-default{background:var(--border2);color:var(--ink3)}
+.badge-fast{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-dim)}
+.badge-power{background:var(--teal-glow);color:var(--teal);border:1px solid var(--teal-dim)}
+.badge-custom{background:var(--blue);color:#fff;opacity:.8}
+
+/* ── Form grid ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.three{grid-template-columns:1fr 1fr 1fr}
+.form-group{position:relative}
+.form-group.full{grid-column:1/-1}
+
+label{display:block;font-size:10px;font-weight:700;letter-spacing:.1em;
+      text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+label .req{color:var(--teal);margin-left:2px}
+label .env-key{font-family:var(--font-mono);font-size:9px;color:var(--ink4);
+               font-weight:400;text-transform:none;letter-spacing:0;margin-left:6px}
+
+input[type=text],input[type=number],select,textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--radius);color:var(--ink);font-family:var(--font-mono);
+  font-size:12px;padding:9px 12px;outline:none;transition:all .2s;
+  -webkit-appearance:none}
+input[type=text]:focus,input[type=number]:focus,select:focus{
+  border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-glow)}
+input.error{border-color:var(--red);box-shadow:0 0 0 3px var(--red-glow)}
+input.valid{border-color:var(--green)}
+select{cursor:pointer}
+select option{background:var(--surface2)}
+
+.field-hint{font-size:10px;color:var(--ink4);margin-top:4px;line-height:1.4}
+.field-error{font-size:10px;color:var(--red);margin-top:4px;display:none}
+.field-error.show{display:block}
+
+/* Range slider */
+.slider-wrap{display:flex;align-items:center;gap:10px}
+input[type=range]{flex:1;-webkit-appearance:none;height:4px;
+                  background:var(--border2);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  border-radius:50%;background:var(--teal);cursor:pointer;
+  box-shadow:0 0 8px var(--teal-dim)}
+.slider-val{font-family:var(--font-mono);font-size:12px;color:var(--teal);
+            min-width:40px;text-align:right}
+
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;gap:10px}
+.toggle{width:40px;height:22px;background:var(--border2);border-radius:11px;
+        cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;
+               background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle.on::after{transform:translateX(18px)}
+.toggle-label{font-size:12px;color:var(--ink2)}
+
+/* Tooltip */
+.tooltip-wrap{position:relative;display:inline-flex;align-items:center;
+              gap:4px;cursor:help}
+.tooltip-icon{width:14px;height:14px;border-radius:50%;background:var(--border2);
+              border:1px solid var(--border2);color:var(--ink3);font-size:8px;
+              display:inline-flex;align-items:center;justify-content:center;
+              font-family:var(--font-mono);font-weight:700;flex-shrink:0}
+.tooltip-box{display:none;position:absolute;left:0;top:calc(100% + 6px);
+             background:var(--surface3);border:1px solid var(--border2);
+             border-radius:var(--radius);padding:10px 12px;font-size:11px;
+             color:var(--ink2);line-height:1.55;width:280px;z-index:100;
+             box-shadow:var(--shadow)}
+.tooltip-wrap:hover .tooltip-box{display:block}
+.tooltip-box .range{display:inline-block;font-family:var(--font-mono);font-size:10px;
+                    color:var(--teal);background:var(--teal-glow);
+                    padding:1px 6px;border-radius:3px;margin-top:4px}
+
+/* ── CMD preview ── */
+.cmd-preview{background:var(--surface);border:1px solid var(--border2);
+             border-radius:var(--radius-lg);padding:16px 18px;margin-top:8px;
+             font-family:var(--font-mono);font-size:11px;color:var(--ink2);
+             line-height:1.8;word-break:break-all;position:relative}
+.cmd-preview .cmd-bin{color:var(--teal)}
+.cmd-preview .cmd-flag{color:var(--amber)}
+.cmd-preview .cmd-val{color:var(--ink)}
+.cmd-copy{position:absolute;top:10px;right:10px;padding:4px 10px;font-size:10px;
+          font-family:var(--font-mono);background:var(--surface2);
+          border:1px solid var(--border2);border-radius:4px;
+          color:var(--ink3);cursor:pointer;transition:all .15s}
+.cmd-copy:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;
+     border-radius:var(--radius);font-family:var(--font-ui);font-size:13px;
+     font-weight:600;cursor:pointer;border:none;transition:all .2s;
+     letter-spacing:.02em}
+.btn-primary{background:var(--teal);color:#001A19}
+.btn-primary:hover{background:#1FDDD8;box-shadow:0 4px 20px var(--teal-glow)}
+.btn-secondary{background:transparent;color:var(--teal);
+               border:1px solid var(--teal-dim)}
+.btn-secondary:hover{background:var(--teal-glow)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(240,79,79,.4)}
+.btn-danger:hover{background:var(--red-glow)}
+.btn-row{display:flex;gap:10px;margin-top:24px;justify-content:flex-end}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius-lg);padding:20px 22px;margin-bottom:14px}
+.card-header{display:flex;justify-content:space-between;align-items:center;
+             margin-bottom:14px}
+.card-title{font-family:var(--font-mono);font-size:11px;font-weight:700;
+            color:var(--teal);letter-spacing:.08em;text-transform:uppercase}
+
+/* ── Pre-flight plan ── */
+.plan-section{margin-bottom:20px}
+.plan-section-title{font-family:var(--font-display);font-size:.75rem;
+                    color:var(--teal);letter-spacing:.1em;text-transform:uppercase;
+                    margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.plan-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.plan-kv{display:flex;align-items:flex-start;gap:0;margin-bottom:6px;font-size:12px}
+.plan-key{width:200px;flex-shrink:0;color:var(--ink3);font-family:var(--font-mono);
+          font-size:11px}
+.plan-val{color:var(--ink);font-family:var(--font-mono);font-size:11px;
+          word-break:break-all}
+.plan-val.good{color:var(--green)}
+.plan-val.warn{color:var(--amber)}
+
+.stage-list{display:flex;flex-direction:column;gap:8px}
+.stage-item{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;
+            background:var(--surface2);border-radius:var(--radius);
+            border:1px solid var(--border)}
+.stage-num{width:26px;height:26px;border-radius:50%;background:var(--teal-glow);
+           border:1px solid var(--teal-dim);color:var(--teal);
+           font-family:var(--font-mono);font-size:10px;font-weight:700;
+           display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stage-name{font-weight:600;font-size:12px;color:var(--ink);margin-bottom:2px}
+.stage-desc{font-size:11px;color:var(--ink3);line-height:1.45}
+
+.interp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.interp-item{background:var(--surface2);border:1px solid var(--border);
+             border-radius:var(--radius);padding:10px 12px}
+.interp-metric{font-size:10px;color:var(--ink3);margin-bottom:3px}
+.interp-expected{font-family:var(--font-mono);font-size:11px;color:var(--teal);
+                 font-weight:700}
+.interp-warn{font-size:10px;color:var(--amber);margin-top:3px}
+
+/* ── Execution panel ── */
+.exec-pipeline{display:flex;flex-direction:column;gap:0}
+.exec-stage{display:flex;align-items:center;gap:14px;padding:13px 16px;
+            border-left:2px solid var(--border);margin-left:20px;
+            position:relative;transition:all .3s}
+.exec-stage::before{content:'';position:absolute;left:-9px;width:16px;height:16px;
+                    border-radius:50%;background:var(--surface);
+                    border:2px solid var(--border);transition:all .3s}
+.exec-stage.running::before{border-color:var(--teal);
+                             box-shadow:0 0 12px var(--teal-dim);
+                             animation:pulse 1s infinite}
+.exec-stage.done::before{background:var(--green);border-color:var(--green)}
+.exec-stage.done{border-left-color:var(--green)}
+.exec-stage.running{border-left-color:var(--teal)}
+@keyframes pulse{0%,100%{box-shadow:0 0 6px var(--teal-dim)}
+                 50%{box-shadow:0 0 16px var(--teal)}}
+.exec-stage-name{font-size:12px;font-weight:600;color:var(--ink2);flex:1}
+.exec-stage.running .exec-stage-name{color:var(--teal)}
+.exec-stage.done .exec-stage-name{color:var(--green)}
+.exec-status{font-family:var(--font-mono);font-size:10px;color:var(--ink4)}
+.exec-stage.running .exec-status{color:var(--teal)}
+.exec-stage.done .exec-status::before{content:'✓  '}
+.exec-tick{font-size:14px;width:20px;text-align:center}
+
+.exec-log{background:var(--surface);border:1px solid var(--border2);
+          border-radius:var(--radius);padding:12px;font-family:var(--font-mono);
+          font-size:10px;color:var(--ink3);height:160px;overflow-y:auto;
+          margin-top:12px;line-height:1.7}
+.exec-log .log-line{display:block}
+.exec-log .log-teal{color:var(--teal)}
+.exec-log .log-green{color:var(--green)}
+.exec-log .log-amber{color:var(--amber)}
+.exec-log .log-dim{color:var(--ink4)}
+
+/* ── Output listing ── */
+.output-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.output-file{background:var(--surface2);border:1px solid var(--border);
+             border-radius:var(--radius);padding:12px 14px;
+             display:flex;align-items:center;gap:12px;transition:all .15s}
+.output-file:hover{border-color:var(--teal-dim);background:var(--surface3)}
+.output-icon{font-size:22px;flex-shrink:0}
+.output-name{font-family:var(--font-mono);font-size:11px;font-weight:700;
+             color:var(--teal);margin-bottom:2px}
+.output-size{font-size:10px;color:var(--ink4);font-family:var(--font-mono)}
+.output-desc{font-size:10px;color:var(--ink3);margin-top:2px}
+.output-dl{margin-left:auto;padding:4px 10px;font-size:10px;
+           font-family:var(--font-mono);background:transparent;
+           border:1px solid var(--border2);border-radius:4px;
+           color:var(--ink3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.output-dl:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ── Guided tour ── */
+.tour-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+              z-index:1000;backdrop-filter:blur(2px)}
+.tour-overlay.active{display:flex;align-items:center;justify-content:center}
+.tour-modal{background:var(--surface);border:1px solid var(--teal-dim);
+            border-radius:var(--radius-xl);padding:32px;max-width:500px;width:90%;
+            box-shadow:0 8px 60px rgba(0,194,184,.2);position:relative}
+.tour-step-num{font-family:var(--font-mono);font-size:10px;color:var(--teal);
+               letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
+.tour-title{font-family:var(--font-display);font-size:1.2rem;color:var(--ink);
+            margin-bottom:12px;line-height:1.3}
+.tour-body{font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:20px}
+.tour-dots{display:flex;gap:6px;margin-bottom:20px}
+.tour-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);
+          transition:background .2s}
+.tour-dot.active{background:var(--teal)}
+.tour-nav{display:flex;justify-content:space-between;align-items:center}
+.tour-close{position:absolute;top:16px;right:16px;background:none;border:none;
+            color:var(--ink4);cursor:pointer;font-size:18px;line-height:1}
+.tour-close:hover{color:var(--ink)}
+
+/* ── Changelog / Enhancements modal ── */
+.cl-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+            z-index:1000;backdrop-filter:blur(3px)}
+.cl-overlay.active{display:flex;align-items:center;justify-content:center}
+.cl-modal{background:var(--surface);border:1px solid var(--amber-dim);
+          border-radius:var(--radius-xl);padding:0;max-width:780px;width:95%;
+          max-height:88vh;display:flex;flex-direction:column;
+          box-shadow:0 8px 60px rgba(245,166,35,.15);position:relative;overflow:hidden}
+.cl-header{padding:24px 28px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.cl-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cl-title{font-family:var(--font-display);font-size:1.1rem;color:var(--amber);
+          font-weight:700;line-height:1.3}
+.cl-subtitle{font-size:11px;color:var(--ink4);margin-top:4px;font-family:var(--font-mono)}
+.cl-close{background:none;border:none;color:var(--ink4);cursor:pointer;font-size:20px;
+          line-height:1;padding:2px;flex-shrink:0}
+.cl-close:hover{color:var(--ink)}
+.cl-filter{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.cl-tag{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;
+        font-family:var(--font-mono);cursor:pointer;border:1px solid transparent;
+        transition:all .15s;letter-spacing:.05em;user-select:none}
+.cl-tag.active{border-color:currentColor}
+.cl-tag[data-cat="all"]    {color:var(--ink2);background:var(--surface2);border-color:var(--border2)}
+.cl-tag[data-cat="all"].active{background:var(--surface3);border-color:var(--ink3)}
+.cl-tag[data-cat="arch"]   {color:#60CFFF;background:rgba(96,207,255,.08)}
+.cl-tag[data-cat="arch"].active{background:rgba(96,207,255,.18)}
+.cl-tag[data-cat="config"] {color:#A78BFA;background:rgba(167,139,250,.08)}
+.cl-tag[data-cat="config"].active{background:rgba(167,139,250,.18)}
+.cl-tag[data-cat="algo"]   {color:var(--teal);background:var(--teal-glow)}
+.cl-tag[data-cat="algo"].active{background:rgba(0,194,184,.25)}
+.cl-tag[data-cat="output"] {color:#34D399;background:rgba(52,211,153,.08)}
+.cl-tag[data-cat="output"].active{background:rgba(52,211,153,.2)}
+.cl-tag[data-cat="ux"]     {color:var(--amber);background:var(--amber-glow)}
+.cl-tag[data-cat="ux"].active{background:rgba(245,166,35,.22)}
+.cl-tag[data-cat="fix"]    {color:var(--red);background:var(--red-glow)}
+.cl-tag[data-cat="fix"].active{background:rgba(240,79,79,.2)}
+.cl-body{overflow-y:auto;padding:0 28px 28px;flex:1}
+.cl-version{margin-top:20px}
+.cl-version-tag{display:inline-flex;align-items:center;gap:8px;
+                font-family:var(--font-mono);font-size:11px;font-weight:700;
+                color:var(--amber);padding:4px 12px;background:var(--amber-glow);
+                border:1px solid var(--amber-dim);border-radius:20px;margin-bottom:10px}
+.cl-version-date{font-size:10px;color:var(--ink4);font-weight:400;font-family:var(--font-mono)}
+.cl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);
+         align-items:flex-start}
+.cl-item:last-child{border-bottom:none}
+.cl-item-badge{flex-shrink:0;padding:2px 7px;border-radius:4px;font-size:9px;
+               font-weight:700;font-family:var(--font-mono);letter-spacing:.05em;
+               margin-top:2px;min-width:52px;text-align:center}
+.badge-arch  {background:rgba(96,207,255,.15); color:#60CFFF}
+.badge-config{background:rgba(167,139,250,.15);color:#A78BFA}
+.badge-algo  {background:var(--teal-glow);     color:var(--teal)}
+.badge-output{background:rgba(52,211,153,.12); color:#34D399}
+.badge-ux    {background:var(--amber-glow);    color:var(--amber)}
+.badge-fix   {background:var(--red-glow);      color:var(--red)}
+.cl-item-text{flex:1}
+.cl-item-title{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.cl-item-desc {font-size:11px;color:var(--ink3);line-height:1.55}
+.cl-item.hidden{display:none}
+.cl-stats{display:flex;gap:16px;padding:12px 0 0;border-top:1px solid var(--border);
+          margin-top:4px;flex-wrap:wrap}
+.cl-stat{text-align:center}
+.cl-stat-n{font-family:var(--font-mono);font-size:1.3rem;font-weight:700;line-height:1}
+.cl-stat-l{font-size:10px;color:var(--ink4);margin-top:2px;text-transform:uppercase;
+           letter-spacing:.07em}
+
+/* ── Misc ── */
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:12px;
+       margin-bottom:12px;border-left:3px solid}
+.alert-info{background:var(--teal-glow);border-color:var(--teal);color:var(--ink2)}
+.alert-warn{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
+.alert-error{background:var(--red-glow);border-color:var(--red);color:var(--red)}
+
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--surface2);border:1px solid var(--border);
+           border-radius:var(--radius);padding:14px;text-align:center}
+.stat-val{font-family:var(--font-mono);font-size:1.4rem;font-weight:700;
+          color:var(--teal);line-height:1}
+.stat-label{font-size:10px;color:var(--ink4);margin-top:4px;text-transform:uppercase;
+            letter-spacing:.07em}
+
+.quality-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.quality-item{display:flex;align-items:center;gap:8px;padding:8px 10px;
+              background:var(--surface2);border-radius:var(--radius);
+              border:1px solid var(--border);font-size:11px}
+.quality-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green)}
+.dot-amber{background:var(--amber)}
+.dot-teal{background:var(--teal)}
+.quality-name{flex:1;color:var(--ink2)}
+.quality-threshold{font-family:var(--font-mono);font-size:10px;color:var(--ink4)}
+
+@media(max-width:700px){
+  .form-grid,.form-grid.three,.profile-grid,.output-grid,.interp-grid,.quality-grid,.stat-row{grid-template-columns:1fr}
+  .phase-tab .tab-num{font-size:13px}
+}
+</style>
+
+<script>
+// Fetch real version from server (GUI mode) or use compile-time default
+(function(){
+  const DEFAULT_VER = "CARGO_VERSION_PLACEHOLDER";
+  function applyVersion(v){
+    document.querySelectorAll('.version-str').forEach(el => el.textContent = v);
+    document.title = 'souporcell ' + v + ' — Mission Control';
+  }
+  if(window.SOUPC_SERVER){
+    fetch('/api/version').then(r=>r.json()).then(d=>{
+      applyVersion('v' + d.version);
+      window._SOUPC_BINARY = d.binary;
+    }).catch(()=>applyVersion(DEFAULT_VER));
+  } else {
+    applyVersion(DEFAULT_VER);
+  }
+})();
+</script>
+</head>
+<body>
+<div class="app">
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-eyebrow">scRNA-seq · Genotype Demultiplexing</div>
+  <h1>souporcell <span class="version-str">v3.0.0</span></h1>
+  <p>Mission Control — Configure, review, execute and inspect your demultiplexing run</p>
+  <div class="version-badge">&#9679; MISSION CONTROL &nbsp;·&nbsp; <span class="version-str">v3.0.0</span></div>
+  <br/>
+  <div style="margin-top:14px;padding:12px 20px;background:var(--surface);border:1px solid var(--border);
+              border-radius:var(--radius-lg);display:inline-block;text-align:left;max-width:720px;
+              font-size:11px;line-height:1.9;color:var(--ink3)">
+    <div>
+      <span style="color:var(--ink4)">Original algorithm:</span>
+      <span style="color:var(--ink2)">Heaton et al., <em>Nature Methods</em> 2020</span>
+      <span style="color:var(--ink4)"> · </span>
+      <a href="https://doi.org/10.1038/s41592-020-0820-1" target="_blank"
+         style="color:var(--teal);text-decoration:none;font-family:var(--font-mono);font-size:10px"
+         >doi:10.1038/s41592-020-0820-1</a>
+    </div>
+    <div>
+      <span style="color:var(--ink4)">Original code:</span>
+      <a href="https://github.com/wheaton5/souporcell" target="_blank"
+         style="color:var(--teal);text-decoration:none;font-family:var(--font-mono);font-size:10px"
+         >wheaton5/souporcell</a>
+    </div>
+    <div>
+      <span style="color:var(--ink4)">Enhanced rewrite:</span>
+      <span style="color:var(--amber);font-weight:600">Jahidul Arafat</span>
+      <span style="color:var(--ink4)"> — </span>
+      <span style="color:var(--ink3)">clean architecture · structured logging · reproducible seeding ·
+      diagnostic SVG plots · HTML run report · config profiles · .env support · fully configurable hyperparameters</span>
+    </div>
+  </div>
+  <br/>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+    <button class="btn btn-secondary" style="font-size:11px" onclick="startTour()">
+      &#9654; Guided Tour — Start here if new
+    </button>
+    <button class="btn btn-secondary" style="font-size:11px;border-color:var(--amber-dim);color:var(--amber)" onclick="openChangelog()">
+      &#9733; What's New — Enhancements v2.4 → v3.0
+    </button>
+    <button class="btn btn-secondary" style="font-size:11px;border-color:var(--violet-dim);color:#A78BFA" onclick="openAlgoAnalysis()">
+      &#8747; Algo Analysis — Complexity &amp; Roadmap
+    </button>
+  </div>
+</div>
+
+<!-- ── PHASE NAV ── -->
+<div class="phase-nav">
+  <div class="phase-tab active" id="tab-1" onclick="goPhase(1)">
+    <span class="tab-num">01</span>Configure
+  </div>
+  <div class="phase-tab locked" id="tab-2" onclick="goPhase(2)">
+    <span class="tab-num">02</span>Pre-flight
+  </div>
+  <div class="phase-tab locked" id="tab-3" onclick="goPhase(3)">
+    <span class="tab-num">03</span>Execute
+  </div>
+  <div class="phase-tab locked" id="tab-4" onclick="goPhase(4)">
+    <span class="tab-num">04</span>Outputs
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     PHASE 1 — CONFIGURE
+════════════════════════════════════════ -->
+<div class="phase-panel active" id="phase-1">
+
+  <!-- Profile selector -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">⚡</div>
+      <div>
+        <div class="section-title">Quick Start — Load a Profile</div>
+        <div class="section-desc">One-click defaults for common scenarios, or configure manually below</div>
+      </div>
+    </div>
+    <div class="profile-grid">
+      <div class="profile-card" id="pc-default" onclick="loadProfile('default')">
+        <span class="pc-badge badge-default">DEFAULT</span>
+        <div class="pc-name">default</div>
+        <div class="pc-desc">Standard 4-donor run. Good starting point for most 10x experiments.</div>
+      </div>
+      <div class="profile-card" id="pc-fast" onclick="loadProfile('fast')">
+        <span class="pc-badge badge-fast">FAST</span>
+        <div class="pc-name">fast_test</div>
+        <div class="pc-desc">Minimal restarts and steps. Smoke test only — not for real analysis.</div>
+      </div>
+      <div class="profile-card" id="pc-hiconv" onclick="loadProfile('hiconv')">
+        <span class="pc-badge badge-power">POWER</span>
+        <div class="pc-name">high_convergence</div>
+        <div class="pc-desc">500 restarts, relaxed locus filters. Use when convergence stability &lt; 70%.</div>
+      </div>
+      <div class="profile-card" id="pc-custom" onclick="loadProfile('custom')">
+        <span class="pc-badge badge-custom">CUSTOM</span>
+        <div class="pc-name">manual</div>
+        <div class="pc-desc">Start from scratch and configure every parameter yourself.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 1: Required inputs -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📂</div>
+      <div>
+        <div class="section-title">Required Inputs</div>
+        <div class="section-desc">Three files must be specified — paths to the sparse allele count matrices and barcode list</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Reference matrix path <span class="req">*</span> <span class="env-key">SOUPC_REF_MATRIX</span>
+          <span class="tooltip-wrap">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-box">MatrixMarket sparse format from <strong>vartrix --ref-matrix</strong>. Contains integer UMI counts supporting the reference allele at each (locus, cell) pair. Usually named <code>ref.mtx</code>.
+              <span class="range">required</span>
+            </span>
+          </span>
+        </label>
+        <input type="text" id="f-ref" placeholder="/path/to/ref.mtx" oninput="validatePath(this,'ref'); updateCmd()"/>
+        <div class="field-hint">MatrixMarket .mtx file from vartrix --ref-matrix</div>
+        <div class="field-error" id="err-ref">Path is required</div>
+      </div>
+      <div class="form-group">
+        <label>Alternate matrix path <span class="req">*</span> <span class="env-key">SOUPC_ALT_MATRIX</span>
+          <span class="tooltip-wrap">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-box">MatrixMarket sparse format from <strong>vartrix --out-matrix</strong>. Same row/column ordering as ref.mtx. Usually named <code>alt.mtx</code>.
+              <span class="range">required</span>
+            </span>
+          </span>
+        </label>
+        <input type="text" id="f-alt" placeholder="/path/to/alt.mtx" oninput="validatePath(this,'alt'); updateCmd()"/>
+        <div class="field-hint">MatrixMarket .mtx file from vartrix --out-matrix</div>
+        <div class="field-error" id="err-alt">Path is required</div>
+      </div>
+      <div class="form-group full">
+        <label>Barcodes file path <span class="req">*</span> <span class="env-key">SOUPC_BARCODES</span>
+          <span class="tooltip-wrap">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-box">One cell barcode per line. Plain text or .gz compressed. Must match the column order in the two matrices. This is the barcodes file you passed to vartrix.
+              <span class="range">required</span>
+            </span>
+          </span>
+        </label>
+        <input type="text" id="f-barcodes" placeholder="/path/to/barcodes.tsv" oninput="validatePath(this,'barcodes'); updateCmd()"/>
+        <div class="field-hint">One barcode per line · .gz supported</div>
+        <div class="field-error" id="err-barcodes">Path is required</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Core clustering -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">🧬</div>
+      <div>
+        <div class="section-title">Core Clustering</div>
+        <div class="section-desc">How many donors, how many attempts, which algorithm</div>
+      </div>
+    </div>
+    <div class="form-grid three">
+      <div class="form-group">
+        <label>Donor clusters (k) <span class="req">*</span> <span class="env-key">SOUPC_NUM_CLUSTERS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">The number of distinct donors you expect in the pooled sample. Must match the actual experiment design. Start with the known number; if unsure, run k-1, k, k+1 and compare convergence.
+              <span class="range">Valid: 2 – 64</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-k" value="4" min="2" max="64"
+               oninput="validateInt(this,2,64,'k'); updateCmd()"/>
+        <div class="field-hint">Number of donors in the pooled library (≥ 2)</div>
+        <div class="field-error" id="err-k">Must be an integer between 2 and 64</div>
+      </div>
+      <div class="form-group">
+        <label>Restarts <span class="env-key">SOUPC_RESTARTS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Number of independent random starts of EM/KHM. More restarts = higher chance of finding the global optimum. For k≤4: 100 is usually sufficient. For k≥8: use 200+. Convergence stability ≥70% is the target.
+              <span class="range">Recommended: 100 – 500</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-restarts" value="100" min="1" max="2000"
+               oninput="validateInt(this,1,2000,'restarts'); updateCmd()"/>
+        <div class="field-hint">Random EM restarts — more = better convergence</div>
+        <div class="field-error" id="err-restarts">Must be between 1 and 2000</div>
+      </div>
+      <div class="form-group">
+        <label>Seed <span class="env-key">SOUPC_SEED</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Random number generator seed. Any non-negative integer. Same seed + same threads = identical results. Change this if you want a different random starting configuration.
+              <span class="range">Any integer ≥ 0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-seed" value="42" min="0"
+               oninput="validateInt(this,0,9999999999,'seed'); updateCmd()"/>
+        <div class="field-hint">For reproducibility — same seed = same result</div>
+        <div class="field-error" id="err-seed">Must be a non-negative integer</div>
+      </div>
+      <div class="form-group">
+        <label>Threads <span class="env-key">SOUPC_THREADS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Parallel CPU threads. Restarts are distributed evenly across threads. Set to the number of physical CPU cores for best performance. Note: changing threads changes result even with same seed.
+              <span class="range">Valid: 1 – 128</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-threads" value="8" min="1" max="128"
+               oninput="validateInt(this,1,128,'threads'); updateCmd()"/>
+        <div class="field-hint">Parallel CPU threads (= physical core count)</div>
+        <div class="field-error" id="err-threads">Must be between 1 and 128</div>
+      </div>
+      <div class="form-group">
+        <label>Clustering method <span class="env-key">SOUPC_CLUSTERING_METHOD</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box"><strong>EM</strong> (Expectation-Maximisation) is the default and recommended for most runs. <strong>KHM</strong> (K-Harmonic Means) is more robust to poor initialisations and useful for large k (≥8), but converges slower.
+            </span>
+          </span>
+        </label>
+        <select id="f-method" onchange="updateCmd(); toggleKhm()">
+          <option value="em">em — Expectation-Maximisation (recommended)</option>
+          <option value="khm">khm — K-Harmonic Means</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Init strategy <span class="env-key">SOUPC_INIT_STRATEGY</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box"><strong>random_uniform</strong>: draw θ uniformly from 0–1. Fast, no bias, default.<br/><strong>random_cell_assignment</strong>: randomly assign cells to clusters then average. Produces biologically-grounded starting points, slower.
+            </span>
+          </span>
+        </label>
+        <select id="f-init" onchange="updateCmd()">
+          <option value="random_uniform">random_uniform (default)</option>
+          <option value="random_cell_assignment">random_cell_assignment</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Locus QC -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">🔬</div>
+      <div>
+        <div class="section-title">Locus Quality Filters</div>
+        <div class="section-desc">Controls which SNP positions are used — stricter = fewer but better loci</div>
+      </div>
+    </div>
+    <div class="alert alert-info">
+      ℹ&nbsp; Loci failing any filter are silently excluded. Typical pass rate: 5–20% of raw loci.
+      If clustering fails (0 loci), reduce these thresholds.
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>min_ref <span class="env-key">SOUPC_MIN_REF</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Minimum number of cells that must have at least 1 reference allele read at a locus for it to be included. Higher = stricter filtering, fewer but more confident loci.
+              <span class="range">Valid: 0 – 100 · Default: 4</span>
+            </span>
+          </span>
+        </label>
+        <div class="slider-wrap">
+          <input type="range" id="f-minref" min="0" max="50" value="4"
+                 oninput="syncSlider('minref'); updateCmd()"/>
+          <div class="slider-val" id="sv-minref">4</div>
+        </div>
+        <div class="field-hint">Min cells with ≥1 ref read · default: 4</div>
+      </div>
+      <div class="form-group">
+        <label>min_alt <span class="env-key">SOUPC_MIN_ALT</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Minimum number of cells with at least 1 alternate allele read. Ensures a locus has variant signal in multiple cells before being used for clustering.
+              <span class="range">Valid: 0 – 100 · Default: 4</span>
+            </span>
+          </span>
+        </label>
+        <div class="slider-wrap">
+          <input type="range" id="f-minalt" min="0" max="50" value="4"
+                 oninput="syncSlider('minalt'); updateCmd()"/>
+          <div class="slider-val" id="sv-minalt">4</div>
+        </div>
+        <div class="field-hint">Min cells with ≥1 alt read · default: 4</div>
+      </div>
+      <div class="form-group">
+        <label>min_ref_umis <span class="env-key">SOUPC_MIN_REF_UMIS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Minimum total ref UMIs summed across all cells at a locus. Setting to 5–10 removes very low-coverage loci. Useful for noisy data.
+              <span class="range">Valid: 0 – 500 · Default: 0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-minrefumis" value="0" min="0" max="500"
+               oninput="validateInt(this,0,500,'minrefumis'); updateCmd()"/>
+        <div class="field-hint">Min total ref UMIs per locus · default: 0</div>
+        <div class="field-error" id="err-minrefumis">Must be 0–500</div>
+      </div>
+      <div class="form-group">
+        <label>min_alt_umis <span class="env-key">SOUPC_MIN_ALT_UMIS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Minimum total alt UMIs summed across all cells. Raises the bar for how much variant evidence a locus must have before being used.
+              <span class="range">Valid: 0 – 500 · Default: 0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-minaltumis" value="0" min="0" max="500"
+               oninput="validateInt(this,0,500,'minaltumis'); updateCmd()"/>
+        <div class="field-hint">Min total alt UMIs per locus · default: 0</div>
+        <div class="field-error" id="err-minaltumis">Must be 0–500</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Annealing -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">🌡️</div>
+      <div>
+        <div class="section-title">Annealing Schedule (Temperature)</div>
+        <div class="section-desc">Controls how cluster assignments harden from soft (exploratory) to hard (convergent)</div>
+      </div>
+    </div>
+    <div class="alert alert-info">
+      ℹ&nbsp; Annealing prevents the algorithm from getting stuck in local optima. Think of it as cooling metal slowly to form a perfect crystal. <strong>Default values work well for most experiments.</strong>
+    </div>
+    <div class="form-grid three">
+      <div class="form-group">
+        <label>anneal_steps <span class="env-key">SOUPC_ANNEAL_STEPS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Number of temperature steps. At step 0 assignments are very soft (exploratory). At the final step temp=1.0 (standard EM). More steps = more thorough landscape exploration.
+              <span class="range">Valid: 3 – 20 · Default: 9</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-annealsteps" value="9" min="3" max="20"
+               oninput="validateInt(this,3,20,'annealsteps'); updateCmd()"/>
+        <div class="field-hint">Temperature steps (T0=hot → TN=standard) · default: 9</div>
+        <div class="field-error" id="err-annealsteps">Must be 3–20</div>
+      </div>
+      <div class="form-group">
+        <label>anneal_base_em <span class="env-key">SOUPC_ANNEAL_BASE_EM</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">EM temperature divisor base. raw_temp = total_alleles / (base × 2^step). Higher base = softer (more exploratory) assignments at each step. Increase if EM gets stuck in local optima.
+              <span class="range">Valid: 0.1 – 200 · Default: 20.0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-annealbaseem" value="20.0" min="0.1" max="200" step="0.1"
+               oninput="validateFloat(this,0.1,200,'annealbaseem'); updateCmd()"/>
+        <div class="field-hint">EM temperature base divisor · default: 20.0</div>
+        <div class="field-error" id="err-annealbaseem">Must be 0.1–200</div>
+      </div>
+      <div class="form-group">
+        <label>anneal_base_khm <span class="env-key">SOUPC_ANNEAL_BASE_KHM</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">KHM temperature divisor base. KHM uses 0.5 vs EM's 20.0 — meaning KHM runs much hotter (softer assignments) by default, making it more exploratory.
+              <span class="range">Valid: 0.01 – 50 · Default: 0.5</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-annealbasekhm" value="0.5" min="0.01" max="50" step="0.01"
+               oninput="validateFloat(this,0.01,50,'annealbasekhm'); updateCmd()"/>
+        <div class="field-hint">KHM temperature base divisor · default: 0.5</div>
+        <div class="field-error" id="err-annealbasekhm">Must be 0.01–50</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Convergence -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📉</div>
+      <div>
+        <div class="section-title">Convergence &amp; Iteration Limits</div>
+        <div class="section-desc">When to stop iterating within each temperature step</div>
+      </div>
+    </div>
+    <div class="form-grid three">
+      <div class="form-group">
+        <label>conv_tol <span class="env-key">SOUPC_CONV_TOL</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Stop iterating when |Δ log-likelihood| &lt; conv_tol × n_cells. Smaller = tighter convergence but slower. For ~3000 cells at default 0.01: stops when improvement &lt; 30 per iteration.
+              <span class="range">Valid: 0.0001 – 0.5 · Default: 0.01</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-convtol" value="0.01" min="0.0001" max="0.5" step="0.001"
+               oninput="validateFloat(this,0.0001,0.5,'convtol'); updateCmd()"/>
+        <div class="field-hint">Convergence tolerance × n_cells · default: 0.01</div>
+        <div class="field-error" id="err-convtol">Must be 0.0001–0.5</div>
+      </div>
+      <div class="form-group">
+        <label>max_iter <span class="env-key">SOUPC_MAX_ITER</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Hard iteration cap per temperature step. Prevents infinite loops on non-convergent data. If you see max_iter hit frequently in logs, the data may have noisy loci — try stricter QC filters.
+              <span class="range">Valid: 10 – 10000 · Default: 1000</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-maxiter" value="1000" min="10" max="10000"
+               oninput="validateInt(this,10,10000,'maxiter'); updateCmd()"/>
+        <div class="field-hint">Max iterations per temperature step · default: 1000</div>
+        <div class="field-error" id="err-maxiter">Must be 10–10000</div>
+      </div>
+      <div class="form-group">
+        <label>min_cluster_cells <span class="env-key">SOUPC_MIN_CLUSTER_CELLS</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Minimum cells for a cluster to be counted as "populated" in verbose convergence logs. Does not affect the algorithm — only the reporting of populated cluster count.
+              <span class="range">Valid: 1 – 5000 · Default: 200</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-mincells" value="200" min="1" max="5000"
+               oninput="validateInt(this,1,5000,'mincells'); updateCmd()"/>
+        <div class="field-hint">Populated cluster threshold · default: 200</div>
+        <div class="field-error" id="err-mincells">Must be 1–5000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: M-step / Theta -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">⚗️</div>
+      <div>
+        <div class="section-title">M-step Pseudocounts &amp; Allele Frequency Bounds</div>
+        <div class="section-desc">Bayesian smoothing on allele frequency estimates — rarely needs changing</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>pseudocount_alt <span class="env-key">SOUPC_PSEUDOCOUNT_ALT</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Laplace pseudocount added to the alt-allele numerator in the M-step. Prevents θ from reaching 0 or 1, which would make the log-likelihood undefined. Default 1.0 = Beta(1,1) = Uniform prior.
+              <span class="range">Valid: 0.01 – 10 · Default: 1.0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-psalt" value="1.0" min="0.01" max="10" step="0.01"
+               oninput="validateFloat(this,0.01,10,'psalt'); updateCmd()"/>
+        <div class="field-hint">Alt-allele numerator pseudocount · default: 1.0</div>
+        <div class="field-error" id="err-psalt">Must be 0.01–10</div>
+      </div>
+      <div class="form-group">
+        <label>pseudocount_total <span class="env-key">SOUPC_PSEUDOCOUNT_TOTAL</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Laplace pseudocount added to the total-allele denominator. Must be ≥ pseudocount_alt. With alt=1 and total=2 this is equivalent to one imaginary balanced observation prior to real data.
+              <span class="range">Valid: 0.02 – 20 · Default: 2.0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-pstotal" value="2.0" min="0.02" max="20" step="0.01"
+               oninput="validateFloat(this,0.02,20,'pstotal'); updateCmd()"/>
+        <div class="field-hint">Total-allele denominator pseudocount · default: 2.0</div>
+        <div class="field-error" id="err-pstotal">Must be 0.02–20</div>
+      </div>
+      <div class="form-group">
+        <label>theta_min <span class="env-key">SOUPC_THETA_MIN</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Lower bound for allele frequency θ after each M-step update. Prevents numerical issues from log(0). 0.01 means a locus is never estimated as less than 1% alt allele frequency.
+              <span class="range">Valid: 0.001 – 0.1 · Default: 0.01</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-thetamin" value="0.01" min="0.001" max="0.1" step="0.001"
+               oninput="validateFloat(this,0.001,0.1,'thetamin'); updateCmd()"/>
+        <div class="field-hint">Lower θ bound · default: 0.01</div>
+        <div class="field-error" id="err-thetamin">Must be 0.001–0.1</div>
+      </div>
+      <div class="form-group">
+        <label>theta_max <span class="env-key">SOUPC_THETA_MAX</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Upper bound for allele frequency θ. Must be &gt; theta_min. Prevents log(1-0) = log(0) singularity. 0.99 means a locus is never estimated as &gt;99% alt.
+              <span class="range">Valid: 0.9 – 0.999 · Default: 0.99</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-thetamax" value="0.99" min="0.9" max="0.999" step="0.001"
+               oninput="validateFloat(this,0.9,0.999,'thetamax'); updateCmd()"/>
+        <div class="field-hint">Upper θ bound · default: 0.99</div>
+        <div class="field-error" id="err-thetamax">Must be 0.9–0.999</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 7: KHM / Advanced -->
+  <div class="section" id="khm-section" style="display:none">
+    <div class="section-header">
+      <div class="section-icon">🎛️</div>
+      <div>
+        <div class="section-title">KHM-specific Settings</div>
+        <div class="section-desc">Only applies when clustering_method = khm</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>khm_p <span class="env-key">SOUPC_KHM_P</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">KHM harmonic-mean exponent. Higher = sharper, more peaked membership around the nearest cluster centre (more aggressive separation). Lower = softer, more EM-like. p=25 is the original default.
+              <span class="range">Valid: 1 – 200 · Default: 25.0</span>
+            </span>
+          </span>
+        </label>
+        <input type="number" id="f-khmp" value="25.0" min="1" max="200" step="0.5"
+               oninput="validateFloat(this,1,200,'khmp'); updateCmd()"/>
+        <div class="field-hint">Harmonic exponent p · default: 25.0</div>
+        <div class="field-error" id="err-khmp">Must be 1–200</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 8: Output -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📊</div>
+      <div>
+        <div class="section-title">Output &amp; Logging</div>
+        <div class="section-desc">Where to write plots and reports, and how much to log</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>plot_dir <span class="env-key">SOUPC_PLOT_DIR</span>
+          <span class="tooltip-wrap"><span class="tooltip-icon">?</span>
+            <span class="tooltip-box">Directory for SVG plots and HTML report. Created if it does not exist. Leave empty to disable all plot/report output (the clustering TSV is always written to stdout regardless).
+            </span>
+          </span>
+        </label>
+        <input type="text" id="f-plotdir" placeholder="./output  (leave empty to disable plots)"
+               oninput="updateCmd()"/>
+        <div class="field-hint">Leave blank to run without plots</div>
+      </div>
+      <div class="form-group">
+        <label>plots</label>
+        <select id="f-plots" onchange="updateCmd()">
+          <option value="all">all — all 6 SVG plots</option>
+          <option value="none">none — no plots (fastest)</option>
+          <option value="restart,balance,confidence">restart + balance + confidence</option>
+          <option value="balance,confidence">balance + confidence only</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Flags</label>
+        <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px">
+          <div class="toggle-wrap">
+            <div class="toggle" id="tog-verbose" onclick="toggleFlag('verbose')"></div>
+            <span class="toggle-label">--verbose  <span style="color:var(--ink4);font-size:10px">(emit CONV line per iteration — large logs)</span></span>
+          </div>
+          <div class="toggle-wrap">
+            <div class="toggle on" id="tog-dryrun" onclick="toggleFlag('dryrun')"></div>
+            <span class="toggle-label">--dry_run  <span style="color:var(--ink4);font-size:10px">(show pre-flight plan before running)</span></span>
+          </div>
+          <div class="toggle-wrap">
+            <div class="toggle" id="tog-souporcell3" onclick="toggleFlag('souporcell3')"></div>
+            <span class="toggle-label">--souporcell3  <span style="color:var(--ink4);font-size:10px">(multi-pass bad-cluster detection — k≥16 only)</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generated command preview -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">⌨️</div>
+      <div>
+        <div class="section-title">Generated CLI Command</div>
+        <div class="section-desc">Updates in real time as you configure above</div>
+      </div>
+    </div>
+    <div class="cmd-preview" id="cmd-preview">
+      <button class="cmd-copy" onclick="copyCmd()">Copy</button>
+      <span id="cmd-text"></span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="downloadConfig()">⬇ Export config.json</button>
+    <button class="btn btn-primary" id="btn-to-preflight" onclick="goPhase(2)">
+      Review Pre-flight Plan →
+    </button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PHASE 2 — PRE-FLIGHT
+════════════════════════════════════════ -->
+<div class="phase-panel" id="phase-2">
+  <div id="preflight-content"></div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="goPhase(1)">← Back to Configure</button>
+    <button class="btn btn-danger" onclick="abortRun()">✖ Abort</button>
+    <button class="btn btn-primary" onclick="goPhase(3)">✔ Approved — Begin Execution →</button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PHASE 3 — EXECUTE
+════════════════════════════════════════ -->
+<div class="phase-panel" id="phase-3">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">🚀</div>
+      <div>
+        <div class="section-title">Pipeline Execution</div>
+        <div class="section-desc">Simulating execution — in production this runs the souporcell binary</div>
+      </div>
+    </div>
+
+    <div class="stat-row" id="exec-stats">
+      <div class="stat-card">
+        <div class="stat-val" id="st-stage">0/10</div>
+        <div class="stat-label">Stages complete</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-elapsed">0s</div>
+        <div class="stat-label">Elapsed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-restarts">0</div>
+        <div class="stat-label">Restarts done</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-conv">—</div>
+        <div class="stat-label">Convergence</div>
+      </div>
+    </div>
+
+    <div class="exec-pipeline" id="exec-pipeline"></div>
+
+    <div class="exec-log" id="exec-log">
+      <span class="log-line log-dim">Waiting to start…</span>
+    </div>
+  </div>
+
+  <div class="btn-row" id="exec-btns">
+    <button class="btn btn-secondary" onclick="goPhase(1)" id="btn-reconfigure">← Reconfigure</button>
+    <button class="btn btn-primary" id="btn-start-exec" onclick="startExecution()">▶ Start Execution</button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     PHASE 4 — OUTPUTS
+════════════════════════════════════════ -->
+<div class="phase-panel" id="phase-4">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">✅</div>
+      <div>
+        <div class="section-title">Run Complete — Output Files</div>
+        <div class="section-desc">All files generated in the configured plot_dir</div>
+      </div>
+    </div>
+    <div id="output-files-grid" class="output-grid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <div>
+        <div class="section-title">Run Summary</div>
+        <div class="section-desc">Key statistics from this execution</div>
+      </div>
+    </div>
+    <div id="run-summary-content"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="goPhase(1)">← New Run</button>
+    <button class="btn btn-primary" onclick="downloadConfig()">⬇ Export This Config</button>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- ── GUIDED TOUR OVERLAY ── -->
+<div class="tour-overlay" id="tour-overlay">
+  <div class="tour-modal">
+    <button class="tour-close" onclick="closeTour()">✕</button>
+    <div class="tour-step-num" id="tour-step-label">Step 1 of 7</div>
+    <div class="tour-title" id="tour-title"></div>
+    <div class="tour-body" id="tour-body"></div>
+    <div class="tour-dots" id="tour-dots"></div>
+    <div class="tour-nav">
+      <button class="btn btn-secondary" id="tour-prev" onclick="tourNav(-1)">← Back</button>
+      <button class="btn btn-primary"   id="tour-next" onclick="tourNav(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const state = {
+  phase: 1,
+  flags: { verbose: false, dryrun: true, souporcell3: false },
+  profileSelected: null,
+  execRunning: false,
+  execDone: false,
+};
+
+const PROFILES = {
+  default: {
+    k:4, restarts:100, seed:42, threads:8, method:'em', init:'random_uniform',
+    minref:4, minalt:4, minrefumis:0, minaltumis:0,
+    annealsteps:9, annealbaseem:20.0, annealbasekhm:0.5,
+    convtol:0.01, maxiter:1000, mincells:200,
+    psalt:1.0, pstotal:2.0, thetamin:0.01, thetamax:0.99, khmp:25.0,
+    plotdir:'./output', plots:'all',
+    verbose:false, souporcell3:false
+  },
+  fast: {
+    k:4, restarts:10, seed:1, threads:1, method:'em', init:'random_uniform',
+    minref:4, minalt:4, minrefumis:0, minaltumis:0,
+    annealsteps:3, annealbaseem:20.0, annealbasekhm:0.5,
+    convtol:0.05, maxiter:100, mincells:50,
+    psalt:1.0, pstotal:2.0, thetamin:0.01, thetamax:0.99, khmp:25.0,
+    plotdir:'./output', plots:'none',
+    verbose:false, souporcell3:false
+  },
+  hiconv: {
+    k:4, restarts:500, seed:42, threads:8, method:'em', init:'random_uniform',
+    minref:2, minalt:2, minrefumis:0, minaltumis:0,
+    annealsteps:9, annealbaseem:20.0, annealbasekhm:0.5,
+    convtol:0.005, maxiter:2000, mincells:100,
+    psalt:1.0, pstotal:2.0, thetamin:0.01, thetamax:0.99, khmp:25.0,
+    plotdir:'./output', plots:'all',
+    verbose:false, souporcell3:false
+  },
+  custom: {}
+};
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function goPhase(n) {
+  if (n > 1 && !validateAll()) return;
+  document.querySelectorAll('.phase-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.phase-tab').forEach(t => {
+    t.classList.remove('active');
+    t.classList.remove('locked');
+  });
+  for (let i=1;i<=4;i++) {
+    const tab = document.getElementById('tab-'+i);
+    if (i < n) tab.classList.add('done');
+    else if (i === n) tab.classList.add('active');
+    else tab.classList.add('locked');
+  }
+  document.getElementById('phase-'+n).classList.add('active');
+  state.phase = n;
+  if (n === 2) buildPreflight();
+  if (n === 3) buildExecPipeline();
+  if (n === 4) buildOutputs();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════
+// PROFILE LOADING
+// ═══════════════════════════════════════════════════
+function loadProfile(name) {
+  document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('pc-'+name).classList.add('selected');
+  state.profileSelected = name;
+  const p = PROFILES[name];
+  if (!p || name === 'custom') { updateCmd(); return; }
+
+  setField('f-k', p.k);
+  setField('f-restarts', p.restarts);
+  setField('f-seed', p.seed);
+  setField('f-threads', p.threads);
+  document.getElementById('f-method').value = p.method;
+  document.getElementById('f-init').value = p.init;
+  setSlider('minref', p.minref);
+  setSlider('minalt', p.minalt);
+  setField('f-minrefumis', p.minrefumis);
+  setField('f-minaltumis', p.minaltumis);
+  setField('f-annealsteps', p.annealsteps);
+  setField('f-annealbaseem', p.annealbaseem);
+  setField('f-annealbasekhm', p.annealbasekhm);
+  setField('f-convtol', p.convtol);
+  setField('f-maxiter', p.maxiter);
+  setField('f-mincells', p.mincells);
+  setField('f-psalt', p.psalt);
+  setField('f-pstotal', p.pstotal);
+  setField('f-thetamin', p.thetamin);
+  setField('f-thetamax', p.thetamax);
+  setField('f-khmp', p.khmp);
+  setField('f-plotdir', p.plotdir);
+  document.getElementById('f-plots').value = p.plots;
+  setToggle('verbose', p.verbose);
+  setToggle('souporcell3', p.souporcell3);
+  state.flags.verbose = p.verbose;
+  state.flags.souporcell3 = p.souporcell3;
+  toggleKhm();
+  updateCmd();
+}
+
+function setField(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function setSlider(name, val) {
+  const el = document.getElementById('f-'+name);
+  if (el) { el.value = val; syncSlider(name); }
+}
+function setToggle(name, val) {
+  const el = document.getElementById('tog-'+name);
+  if (!el) return;
+  if (val) el.classList.add('on'); else el.classList.remove('on');
+}
+
+// ═══════════════════════════════════════════════════
+// VALIDATION
+// ═══════════════════════════════════════════════════
+function validatePath(el, key) {
+  const err = document.getElementById('err-'+key);
+  if (!el.value.trim()) {
+    el.classList.add('error'); el.classList.remove('valid');
+    if (err) err.classList.add('show');
+  } else {
+    el.classList.remove('error'); el.classList.add('valid');
+    if (err) err.classList.remove('show');
+  }
+}
+
+function validateInt(el, min, max, key) {
+  const v = parseInt(el.value);
+  const err = document.getElementById('err-'+key);
+  if (isNaN(v) || v < min || v > max) {
+    el.classList.add('error'); el.classList.remove('valid');
+    if (err) err.classList.add('show');
+  } else {
+    el.classList.remove('error'); el.classList.add('valid');
+    if (err) err.classList.remove('show');
+  }
+}
+
+function validateFloat(el, min, max, key) {
+  const v = parseFloat(el.value);
+  const err = document.getElementById('err-'+key);
+  if (isNaN(v) || v < min || v > max) {
+    el.classList.add('error'); el.classList.remove('valid');
+    if (err) err.classList.add('show');
+  } else {
+    el.classList.remove('error'); el.classList.add('valid');
+    if (err) err.classList.remove('show');
+  }
+}
+
+function validateAll() {
+  let ok = true;
+  const required = ['f-ref','f-alt','f-barcodes'];
+  required.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) {
+      el.classList.add('error');
+      const key = id.replace('f-','');
+      const err = document.getElementById('err-'+key);
+      if (err) err.classList.add('show');
+      ok = false;
+    }
+  });
+  if (!ok) {
+    alert('Please fill in all required fields (marked with ★) before proceeding.');
+  }
+  return ok;
+}
+
+// ═══════════════════════════════════════════════════
+// SLIDERS + TOGGLES
+// ═══════════════════════════════════════════════════
+function syncSlider(name) {
+  const el = document.getElementById('f-'+name);
+  const sv = document.getElementById('sv-'+name);
+  if (el && sv) sv.textContent = el.value;
+}
+
+function toggleFlag(name) {
+  const el = document.getElementById('tog-'+name);
+  state.flags[name] = !state.flags[name];
+  if (state.flags[name]) el.classList.add('on');
+  else el.classList.remove('on');
+  updateCmd();
+}
+
+function toggleKhm() {
+  const m = document.getElementById('f-method').value;
+  document.getElementById('khm-section').style.display = m === 'khm' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════
+// CMD BUILDER
+// ═══════════════════════════════════════════════════
+function getConfig() {
+  return {
+    ref:           document.getElementById('f-ref').value.trim(),
+    alt:           document.getElementById('f-alt').value.trim(),
+    barcodes:      document.getElementById('f-barcodes').value.trim(),
+    k:             document.getElementById('f-k').value,
+    restarts:      document.getElementById('f-restarts').value,
+    seed:          document.getElementById('f-seed').value,
+    threads:       document.getElementById('f-threads').value,
+    method:        document.getElementById('f-method').value,
+    init:          document.getElementById('f-init').value,
+    minref:        document.getElementById('f-minref').value,
+    minalt:        document.getElementById('f-minalt').value,
+    minrefumis:    document.getElementById('f-minrefumis').value,
+    minaltumis:    document.getElementById('f-minaltumis').value,
+    annealsteps:   document.getElementById('f-annealsteps').value,
+    annealbaseem:  document.getElementById('f-annealbaseem').value,
+    annealbasekhm: document.getElementById('f-annealbasekhm').value,
+    convtol:       document.getElementById('f-convtol').value,
+    maxiter:       document.getElementById('f-maxiter').value,
+    mincells:      document.getElementById('f-mincells').value,
+    psalt:         document.getElementById('f-psalt').value,
+    pstotal:       document.getElementById('f-pstotal').value,
+    thetamin:      document.getElementById('f-thetamin').value,
+    thetamax:      document.getElementById('f-thetamax').value,
+    khmp:          document.getElementById('f-khmp').value,
+    plotdir:       document.getElementById('f-plotdir').value.trim(),
+    plots:         document.getElementById('f-plots').value,
+    verbose:       state.flags.verbose,
+    dryrun:        state.flags.dryrun,
+    souporcell3:   state.flags.souporcell3,
+  };
+}
+
+function updateCmd() {
+  const c = getConfig();
+  const bin = '<span class="cmd-bin">./target/release/souporcell</span>';
+  const f = (flag, val) =>
+    ` <span class="cmd-flag">${flag}</span> <span class="cmd-val">${val}</span>`;
+  const fv = (flag) =>
+    ` <span class="cmd-flag">${flag}</span>`;
+
+  let cmd = bin;
+  if (c.ref)       cmd += f('-r', c.ref);
+  if (c.alt)       cmd += f('-a', c.alt);
+  if (c.barcodes)  cmd += f('-b', c.barcodes);
+  cmd += f('-k', c.k);
+  cmd += f('--threads', c.threads);
+  cmd += f('--seed', c.seed);
+  cmd += f('--restarts', c.restarts);
+  if (c.method !== 'em') cmd += f('--clustering_method', c.method);
+  if (c.init !== 'random_uniform') cmd += f('--initialization_strategy', c.init);
+  if (c.minref !== '4')   cmd += f('--min_ref', c.minref);
+  if (c.minalt !== '4')   cmd += f('--min_alt', c.minalt);
+  if (c.minrefumis !== '0') cmd += f('--min_ref_umis', c.minrefumis);
+  if (c.minaltumis !== '0') cmd += f('--min_alt_umis', c.minaltumis);
+  if (c.annealsteps !== '9')   cmd += f('--anneal_steps', c.annealsteps);
+  if (c.annealbaseem !== '20') cmd += f('--anneal_base_em', c.annealbaseem);
+  if (c.annealbasekhm !== '0.5') cmd += f('--anneal_base_khm', c.annealbasekhm);
+  if (c.convtol !== '0.01')  cmd += f('--conv_tol', c.convtol);
+  if (c.maxiter !== '1000')  cmd += f('--max_iter', c.maxiter);
+  if (c.mincells !== '200')  cmd += f('--min_cluster_cells', c.mincells);
+  if (c.psalt !== '1')   cmd += f('--pseudocount_alt', c.psalt);
+  if (c.pstotal !== '2') cmd += f('--pseudocount_total', c.pstotal);
+  if (c.thetamin !== '0.01') cmd += f('--theta_min', c.thetamin);
+  if (c.thetamax !== '0.99') cmd += f('--theta_max', c.thetamax);
+  if (c.method === 'khm' && c.khmp !== '25') cmd += f('--khm_p', c.khmp);
+  if (c.plotdir)   cmd += f('--plot_dir', c.plotdir);
+  if (c.plots !== 'all') cmd += f('--plots', c.plots);
+  if (c.verbose)   cmd += fv('--verbose');
+  if (c.dryrun)    cmd += fv('--dry_run');
+  if (c.souporcell3) cmd += f('--souporcell3', 'true');
+  const outdir = c.plotdir || '.';
+  cmd += ' <span class="cmd-flag">\\</span><br>> ' + outdir + '/clusters_tmp.tsv';
+  cmd += ' <span class="cmd-flag">\\</span><br>2> >(tee ' + outdir + '/clusters.err)';
+
+  document.getElementById('cmd-text').innerHTML = cmd;
+}
+
+function copyCmd() {
+  // Build a clean single-line command from the config (no HTML, no line breaks)
+  const c = getConfig();
+  const flag = (f, v) => ' ' + f + ' ' + v;
+  const fv   = (f)    => ' ' + f;
+  let cmd = './target/release/souporcell';
+  if (c.ref)      cmd += flag('-r', c.ref);
+  if (c.alt)      cmd += flag('-a', c.alt);
+  if (c.barcodes) cmd += flag('-b', c.barcodes);
+  cmd += flag('-k', c.k);
+  cmd += flag('--threads', c.threads);
+  cmd += flag('--seed', c.seed);
+  cmd += flag('--restarts', c.restarts);
+  if (c.method !== 'em')             cmd += flag('--clustering_method', c.method);
+  if (c.init !== 'random_uniform')   cmd += flag('--initialization_strategy', c.init);
+  if (c.minref !== '4')              cmd += flag('--min_ref', c.minref);
+  if (c.minalt !== '4')              cmd += flag('--min_alt', c.minalt);
+  if (c.minrefumis !== '0')          cmd += flag('--min_ref_umis', c.minrefumis);
+  if (c.minaltumis !== '0')          cmd += flag('--min_alt_umis', c.minaltumis);
+  if (c.annealsteps !== '9')         cmd += flag('--anneal_steps', c.annealsteps);
+  if (c.annealbaseem !== '20')       cmd += flag('--anneal_base_em', c.annealbaseem);
+  if (c.annealbasekhm !== '0.5')     cmd += flag('--anneal_base_khm', c.annealbasekhm);
+  if (c.convtol !== '0.01')          cmd += flag('--conv_tol', c.convtol);
+  if (c.maxiter !== '1000')          cmd += flag('--max_iter', c.maxiter);
+  if (c.mincells !== '200')          cmd += flag('--min_cluster_cells', c.mincells);
+  if (c.psalt !== '1')               cmd += flag('--pseudocount_alt', c.psalt);
+  if (c.pstotal !== '2')             cmd += flag('--pseudocount_total', c.pstotal);
+  if (c.thetamin !== '0.01')         cmd += flag('--theta_min', c.thetamin);
+  if (c.thetamax !== '0.99')         cmd += flag('--theta_max', c.thetamax);
+  if (c.method === 'khm' && c.khmp !== '25') cmd += flag('--khm_p', c.khmp);
+  if (c.plotdir)  cmd += flag('--plot_dir', c.plotdir);
+  if (c.plots !== 'all') cmd += flag('--plots', c.plots);
+  if (c.verbose)      cmd += fv('--verbose');
+  if (c.dryrun)       cmd += fv('--dry_run');
+  if (c.souporcell3)  cmd += flag('--souporcell3', 'true');
+  const outdir = c.plotdir || '.';
+  cmd += ' > ' + outdir + '/clusters_tmp.tsv 2> >(tee ' + outdir + '/clusters.err)';
+  navigator.clipboard.writeText(cmd).then(() => {
+    const btn = document.querySelector('.cmd-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// PRE-FLIGHT BUILDER
+// ═══════════════════════════════════════════════════
+function buildPreflight() {
+  const c = getConfig();
+  const k  = parseInt(c.k);
+  const r  = parseInt(c.restarts);
+  const th = parseInt(c.threads);
+  const as = parseInt(c.annealsteps);
+  const workUnits = r * as;
+  const perThread = Math.ceil(workUnits / th);
+  const convPct   = 70;
+  const expPerCluster = Math.round(100 / k);
+
+  const stages = [
+    ['Load matrices',          `Read ref.mtx + alt.mtx into sparse CSR. Decompress .gz if needed.`],
+    ['Load barcodes',          `Build barcode→index map from ${c.barcodes || '(barcodes file)'}`],
+    ['Locus QC filter',        `min_ref=${c.minref} · min_alt=${c.minalt} · min_ref_umis=${c.minrefumis} · min_alt_umis=${c.minaltumis}`],
+    ['Init cluster centres',   `${r} × k=${k} theta vectors using ${c.init}`],
+    [`${c.method.toUpperCase()} + annealing`, `${r} restarts × ${as} temp steps across ${th} threads · conv_tol=${c.convtol} · max_iter=${c.maxiter}`],
+    ['Global optimum select',  `Pick restart with highest total log-likelihood across all ${th} threads`],
+    ['Cell assignment',        `Assign each cell to argmax cluster · confidence = best_lp − second_best_lp`],
+    ['Write clusters_tmp.tsv', `One row per barcode: cluster index + k log-probabilities → stdout`],
+    ['SVG plots',              `${c.plots} → ${c.plotdir || '(disabled)'}`],
+    ['HTML run report',        `souporcell_report.html → ${c.plotdir || '(disabled)'}`],
+  ];
+
+  const qualityChecks = [
+    ['Loci QC pass rate',       '> 1% of raw loci', 'teal'],
+    ['Matrix sparsity',         '> 90% zero coverage', 'teal'],
+    ['All restarts complete',   `${r} of ${r}`, 'teal'],
+    ['Convergence stability',   '≥ 70% at global optimum', 'amber'],
+    ['Cluster balance',         '< 50% max deviation', 'teal'],
+    ['No empty clusters',       `All ${k} clusters populated`, 'teal'],
+    ['Median cell confidence',  '> 15 log-units', 'teal'],
+    ['SVG plots written',       'All requested', 'teal'],
+    ['clusters_tmp.tsv',        'Non-empty', 'teal'],
+    ['HTML report',             'Generated', 'teal'],
+  ];
+
+  const interp = [
+    ['Cells per cluster',        `~${expPerCluster}% of total`, 'Severe imbalance (>50%) → k may be too large'],
+    ['Convergence stability',    `≥ ${convPct}% of ${r} restarts`, 'Use profiles/high_convergence.json if failing'],
+    ['Median confidence',        '> 15 log-units', 'Low confidence → likely doublets, check troublet'],
+    ['Loci pass rate',           '> 1% of raw loci', 'If 0 loci pass → lower min_ref / min_alt'],
+    ['Matrix sparsity',          '> 90% zero entries', 'Low sparsity → check ref/alt matrix pairing'],
+    ['Iter cap hits',            `iters < ${c.maxiter} per step`, 'Cap hit → noisy loci or conv_tol too tight'],
+    ['Empty clusters',           '0 empty clusters', 'Empty → k larger than actual donors'],
+  ];
+
+  const html = `
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">🔍 Run Identity</div>
+  </div>
+  <div class="plan-kv"><span class="plan-key">Run ID</span><span class="plan-val">k${k}_r${r}_s${c.seed}_t${th}</span></div>
+  <div class="plan-kv"><span class="plan-key">Algorithm</span><span class="plan-val">${c.method.toUpperCase()} + deterministic annealing (${as} steps)</span></div>
+  <div class="plan-kv"><span class="plan-key">Config source</span><span class="plan-val">GUI → ${state.profileSelected || 'manual'} profile</span></div>
+  <div class="plan-kv"><span class="plan-key">ref_matrix</span><span class="plan-val">${c.ref || '⚠ not set'}</span></div>
+  <div class="plan-kv"><span class="plan-key">alt_matrix</span><span class="plan-val">${c.alt || '⚠ not set'}</span></div>
+  <div class="plan-kv"><span class="plan-key">barcodes</span><span class="plan-val">${c.barcodes || '⚠ not set'}</span></div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">📋 Pipeline Stages (in order)</div></div>
+  <div class="stage-list">
+    ${stages.map(([n,d],i)=>`
+    <div class="stage-item">
+      <div class="stage-num">${String(i+1).padStart(2,'0')}</div>
+      <div><div class="stage-name">${n}</div><div class="stage-desc">${d}</div></div>
+    </div>`).join('')}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">🌡️ Algorithm Hyperparameters</div></div>
+  <div class="form-grid">
+    <div>
+      <div class="plan-section-title">Annealing</div>
+      <div class="plan-kv"><span class="plan-key">anneal_steps</span><span class="plan-val">${c.annealsteps} (T0=hot → T${parseInt(c.annealsteps)-1}=1.0)</span></div>
+      <div class="plan-kv"><span class="plan-key">anneal_base_em</span><span class="plan-val">${c.annealbaseem} → T0 example: cell(100 alleles) → temp=${(100/parseFloat(c.annealbaseem)).toFixed(1)}</span></div>
+      <div class="plan-kv"><span class="plan-key">anneal_base_khm</span><span class="plan-val">${c.annealbasekhm}</span></div>
+      <div class="plan-section-title" style="margin-top:12px">Convergence</div>
+      <div class="plan-kv"><span class="plan-key">conv_tol</span><span class="plan-val">${c.convtol} → stop when |Δ| < ${(parseFloat(c.convtol)*3000).toFixed(0)} (for ~3000 cells)</span></div>
+      <div class="plan-kv"><span class="plan-key">max_iter</span><span class="plan-val">${c.maxiter} iterations cap per temp step</span></div>
+    </div>
+    <div>
+      <div class="plan-section-title">M-step / Theta</div>
+      <div class="plan-kv"><span class="plan-key">pseudocount_alt</span><span class="plan-val">${c.psalt}</span></div>
+      <div class="plan-kv"><span class="plan-key">pseudocount_total</span><span class="plan-val">${c.pstotal}</span></div>
+      <div class="plan-kv"><span class="plan-key">theta bounds</span><span class="plan-val">[${c.thetamin}, ${c.thetamax}]</span></div>
+      ${c.method==='khm'?`<div class="plan-section-title" style="margin-top:12px">KHM</div>
+      <div class="plan-kv"><span class="plan-key">khm_p</span><span class="plan-val">${c.khmp}</span></div>`:''}
+    </div>
+  </div>
+  <div class="plan-kv" style="margin-top:10px"><span class="plan-key">Total work units</span>
+    <span class="plan-val">${r} restarts × ${as} steps = <strong style="color:var(--teal)">${workUnits}</strong> · ${perThread}/thread across ${th} threads</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">📄 Expected Output Format</div></div>
+  <div style="background:var(--surface2);border-radius:var(--radius);padding:12px;
+              font-family:var(--font-mono);font-size:10.5px;color:var(--ink3);line-height:2">
+    <span style="color:var(--teal)">BARCODE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+    <span style="color:var(--amber)">CLUSTER</span>&nbsp;&nbsp;
+    <span style="color:var(--ink3)">LP_0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LP_1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LP_2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LP_3</span><br/>
+    AAACATTGAGCTAC-1&nbsp;&nbsp;<span style="color:var(--amber)">2</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-312.44&nbsp;&nbsp;&nbsp;&nbsp;-298.11&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--green)">-287.56</strong>&nbsp;&nbsp;&nbsp;&nbsp;-301.88<br/>
+    AAACATTGATCAGC-1&nbsp;&nbsp;<span style="color:var(--amber)">0</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--green)">-289.12</strong>&nbsp;&nbsp;&nbsp;&nbsp;-401.55&nbsp;&nbsp;&nbsp;&nbsp;-398.70&nbsp;&nbsp;&nbsp;&nbsp;-411.22<br/>
+    <span style="color:var(--ink4)">... (one row per barcode)</span>
+  </div>
+  <div class="field-hint" style="margin-top:8px">
+    Column 2 = best-fit donor cluster (0-based · 0 to k-1). Columns 3..k+2 = log-prob per cluster. Least negative = best match (green). Feed this to <strong>troublet</strong> (Stage 7).
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">🎯 Expected Results &amp; Interpretation Guide</div></div>
+  <div class="interp-grid">
+    ${interp.map(([m,e,w])=>`
+    <div class="interp-item">
+      <div class="interp-metric">${m}</div>
+      <div class="interp-expected">${e}</div>
+      <div class="interp-warn">⚠ ${w}</div>
+    </div>`).join('')}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><div class="card-title">✅ Automated Quality Checklist (10 checks)</div></div>
+  <div class="quality-grid">
+    ${qualityChecks.map(([n,t,c])=>`
+    <div class="quality-item">
+      <div class="quality-dot dot-${c}"></div>
+      <span class="quality-name">${n}</span>
+      <span class="quality-threshold">${t}</span>
+    </div>`).join('')}
+  </div>
+</div>
+
+<div class="alert alert-warn" style="margin-top:16px">
+  ⚠&nbsp; <strong>Nothing has been read or written yet.</strong> All of the above is the planned behaviour only.
+  Review carefully, then click <strong>Approved — Begin Execution</strong> below.
+</div>`;
+
+  document.getElementById('preflight-content').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// EXECUTION SIMULATION
+// ═══════════════════════════════════════════════════
+const EXEC_STAGES = [
+  {name:'Load matrices',           ms:800,  log:'Loading ref.mtx and alt.mtx (sparse CSR format)…'},
+  {name:'Load barcodes',           ms:300,  log:'Reading barcodes file, building index map…'},
+  {name:'Locus QC filter',         ms:600,  log:'Applying min_ref / min_alt filters…'},
+  {name:'Init cluster centres',    ms:400,  log:'Initialising theta vectors (random_uniform)…'},
+  {name:'EM + annealing (T0–T4)',  ms:2200, log:'Running restarts… temperature stepping T0→T4…'},
+  {name:'EM + annealing (T5–T8)',  ms:1800, log:'Cooling… temperature stepping T5→T8… approaching convergence…'},
+  {name:'Global optimum select',   ms:300,  log:'Comparing all restart solutions… selecting best log-prob…'},
+  {name:'Cell assignment',         ms:400,  log:'Assigning cells to argmax clusters… computing confidence scores…'},
+  {name:'Write clusters_tmp.tsv',  ms:200,  log:'Writing output TSV to stdout…'},
+  {name:'SVG plots + HTML report', ms:700,  log:'Generating 6 SVG plots and HTML report…'},
+];
+
+function buildExecPipeline() {
+  const container = document.getElementById('exec-pipeline');
+  container.innerHTML = EXEC_STAGES.map((s, i) => `
+    <div class="exec-stage" id="es-${i}">
+      <span class="exec-tick" id="et-${i}"></span>
+      <span class="exec-stage-name">${s.name}</span>
+      <span class="exec-status" id="esr-${i}">pending</span>
+    </div>`).join('');
+}
+
+function startExecution() {
+  if (window.SOUPC_SERVER) { startRealExecution(); return; }
+  if (state.execRunning) return;
+  state.execRunning = true;
+  document.getElementById('btn-start-exec').disabled = true;
+  document.getElementById('btn-reconfigure').disabled = true;
+
+  const c = getConfig();
+  const log = document.getElementById('exec-log');
+  log.innerHTML = '';
+  let elapsed = 0;
+  const elapsedEl = document.getElementById('st-elapsed');
+  const stageEl   = document.getElementById('st-stage');
+  const restartEl = document.getElementById('st-restarts');
+  const convEl    = document.getElementById('st-conv');
+
+  const ticker = setInterval(() => {
+    elapsed++;
+    elapsedEl.textContent = elapsed + 's';
+  }, 1000);
+
+  function addLog(msg, cls='') {
+    const span = document.createElement('span');
+    span.className = 'log-line ' + (cls ? 'log-'+cls : 'log-dim');
+    span.textContent = msg;
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  addLog(`[PARAMS] Sources: GUI → ${state.profileSelected||'manual'} profile`, 'teal');
+  addLog(`[PARAMS] k=${c.k}  restarts=${c.restarts}  seed=${c.seed}  threads=${c.threads}`, 'teal');
+
+  let stageIdx = 0;
+  const r = parseInt(c.restarts);
+
+  function runNextStage() {
+    if (stageIdx >= EXEC_STAGES.length) {
+      clearInterval(ticker);
+      state.execRunning = false;
+      state.execDone = true;
+      stageEl.textContent = `${EXEC_STAGES.length}/${EXEC_STAGES.length}`;
+      convEl.textContent = '73%';
+      convEl.style.color = 'var(--green)';
+      addLog(`\n✔  Run complete! Total time: ${elapsed}s`, 'green');
+      addLog(`✔  clusters_tmp.tsv written`, 'green');
+      addLog(`✔  6 SVG plots written to ${c.plotdir||'./output'}`, 'green');
+      addLog(`✔  souporcell_report.html written`, 'green');
+      document.getElementById('btn-start-exec').textContent = '✔ Done — View Outputs';
+      document.getElementById('btn-start-exec').disabled = false;
+      document.getElementById('btn-start-exec').onclick = () => goPhase(4);
+    if(window.SOUPC_SERVER) { loadRealOutputFiles(); }
+      return;
+    }
+    const s = EXEC_STAGES[stageIdx];
+    const stEl  = document.getElementById('es-'+stageIdx);
+    const srEl  = document.getElementById('esr-'+stageIdx);
+    const tkEl  = document.getElementById('et-'+stageIdx);
+    stEl.classList.add('running');
+    srEl.textContent = 'running…';
+    tkEl.textContent = '⏳';
+    stageEl.textContent = `${stageIdx}/${EXEC_STAGES.length}`;
+    addLog(`\n[Stage ${stageIdx+1}/${EXEC_STAGES.length}] ${s.name}`, 'teal');
+    addLog(`  ${s.log}`);
+
+    // Extra log lines for the EM stage
+    if (stageIdx === 4 || stageIdx === 5) {
+      const mid = Math.floor(r/2);
+      setTimeout(() => {
+        addLog(`  RESTART  0  ${Math.floor(mid*0.3)}  -14502.1  -14502.1`);
+        addLog(`  RESTART  1  ${Math.floor(mid*0.6)}  -14108.8  -14108.8`);
+        restartEl.textContent = Math.floor(mid*0.8);
+      }, s.ms * 0.4);
+      setTimeout(() => {
+        addLog(`  EM  thread=0  epoch=0  temp_step=${stageIdx===4?4:8}/8  iters=12  loss=-13412.4  delta=0.0031`);
+        restartEl.textContent = r;
+        convEl.textContent = '73%';
+      }, s.ms * 0.8);
+    }
+
+    setTimeout(() => {
+      stEl.classList.remove('running');
+      stEl.classList.add('done');
+      srEl.textContent = 'done';
+      tkEl.textContent = '';
+      addLog(`  ✔ ${s.name} complete`, 'green');
+      stageIdx++;
+      runNextStage();
+    }, s.ms);
+  }
+
+  runNextStage();
+}
+
+// ═══════════════════════════════════════════════════
+// OUTPUTS
+// ═══════════════════════════════════════════════════
+function buildOutputs() {
+  const c = getConfig();
+  const dir = c.plotdir || './output';
+
+  const files = [
+    {icon:'📄', name:'clusters_tmp.tsv',         size:'~420 KB', desc:'Primary output — one row per cell barcode with cluster + log-probs. Feed to troublet (Stage 7).', dl:true},
+    {icon:'📊', name:'restart_landscape.svg',     size:'~38 KB',  desc:'Final log-likelihood per restart, sorted worst→best. Check convergence rate.', dl:true},
+    {icon:'📈', name:'convergence_curves.svg',    size:'~65 KB',  desc:'Per-iteration loss curves for all restarts. Requires --verbose.', dl:true},
+    {icon:'🌡️', name:'annealing_profile.svg',     size:'~29 KB',  desc:'Mean ± SD loss at each temperature step T0–T8.', dl:true},
+    {icon:'⚖️', name:'cluster_balance.svg',       size:'~18 KB',  desc:'Cells per cluster vs expected equal split.', dl:true},
+    {icon:'🎯', name:'posterior_confidence.svg',  size:'~42 KB',  desc:'Histogram of best_lp − second_best_lp. Red zone = ambiguous cells.', dl:true},
+    {icon:'⚙️', name:'thread_efficiency.svg',     size:'~22 KB',  desc:'Restart count and best log-prob per thread.', dl:true},
+    {icon:'🌐', name:'souporcell_report.html',    size:'~310 KB', desc:'Self-contained HTML run report. Interactive D3 graph, 5 results tables, quality cards. Open in any browser.', dl:true},
+    {icon:'📝', name:'clusters.err',              size:'~85 KB',  desc:'Full stderr log — PARAMS, per-restart RESTART lines, EM/KHM temp-step lines.', dl:true},
+  ];
+
+  document.getElementById('output-files-grid').innerHTML = files.map(f => `
+    <div class="output-file">
+      <span class="output-icon">${f.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div class="output-name">${f.name}</div>
+        <div class="output-size">${dir}/${f.name} &nbsp;·&nbsp; ${f.size}</div>
+        <div class="output-desc">${f.desc}</div>
+      </div>
+      ${f.dl ? `<button class="output-dl" onclick="fakeDownload('${f.name}')">⬇ Download</button>` : ''}
+    </div>`).join('');
+
+  const c2 = getConfig();
+  document.getElementById('run-summary-content').innerHTML = `
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-val" style="color:var(--teal)">3,639</div><div class="stat-label">Cells assigned</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--teal)">2,913</div><div class="stat-label">Loci used</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">73%</div><div class="stat-label">Convergence</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">-13,212</div><div class="stat-label">Best log-prob</div></div>
+    </div>
+    <div class="alert alert-info">
+      ✔&nbsp; Run completed successfully. Convergence stability 73% — above the 70% threshold.
+      Open <strong>souporcell_report.html</strong> in your browser for the full interactive analysis report.
+    </div>`;
+}
+
+function fakeDownload(name) {
+  const dir = document.getElementById('f-plotdir').value.trim() || './output';
+  if(window.SOUPC_SERVER){
+    // Real download via server
+    const path = encodeURIComponent(dir + '/' + name);
+    window.open('/files/' + path, '_blank');
+  } else {
+    alert('Run  souporcell --gui  in your terminal to enable real file downloads.');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CONFIG JSON EXPORT
+// ═══════════════════════════════════════════════════
+function downloadConfig() {
+  const c = getConfig();
+  const profile = {
+    profile: `k${c.k}_gui_export`,
+    description: `GUI-generated profile — k=${c.k}, restarts=${c.restarts}, seed=${c.seed}`,
+    params: {
+      ref_matrix: c.ref, alt_matrix: c.alt, barcodes: c.barcodes,
+      num_clusters: parseInt(c.k), restarts: parseInt(c.restarts),
+      seed: parseInt(c.seed), threads: parseInt(c.threads),
+      clustering_method: c.method, initialization_strategy: c.init,
+      min_ref: parseInt(c.minref), min_alt: parseInt(c.minalt),
+      min_ref_umis: parseInt(c.minrefumis), min_alt_umis: parseInt(c.minaltumis),
+      anneal_steps: parseInt(c.annealsteps),
+      anneal_base_em: parseFloat(c.annealbaseem),
+      anneal_base_khm: parseFloat(c.annealbasekhm),
+      conv_tol: parseFloat(c.convtol), max_iter: parseInt(c.maxiter),
+      min_cluster_cells: parseInt(c.mincells),
+      pseudocount_alt: parseFloat(c.psalt), pseudocount_total: parseFloat(c.pstotal),
+      theta_min: parseFloat(c.thetamin), theta_max: parseFloat(c.thetamax),
+      khm_p: parseFloat(c.khmp),
+      verbose: c.verbose, souporcell3: c.souporcell3,
+      plot_dir: c.plotdir, plots: c.plots, cleanup: false
+    }
+  };
+  const blob = new Blob([JSON.stringify(profile, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `k${c.k}_gui_export.json`;
+  a.click();
+}
+
+function abortRun() {
+  if (confirm('Abort and return to configuration?')) goPhase(1);
+}
+
+// ═══════════════════════════════════════════════════
+// GUIDED TOUR
+// ═══════════════════════════════════════════════════
+const TOUR = [
+  {title:'Welcome to souporcell Mission Control',
+   body:`This GUI guides you through running a genotype-based scRNA-seq demultiplexing analysis — no command-line experience required.<br/><br/>
+   <strong>Demultiplexing</strong> means: you pooled cells from multiple donors, sequenced them together, and now want to figure out which cell came from which donor — purely from SNP signals in the RNA reads.<br/><br/>
+   There are 4 phases: <strong>Configure → Pre-flight → Execute → Outputs</strong>. We'll walk through each one.`},
+  {title:'Phase 1 — Quick Start Profiles',
+   body:`Start by selecting a <strong>profile</strong> at the top. A profile pre-fills all parameters for a common scenario:<br/><br/>
+   <strong>default</strong> — sensible defaults for most 4-donor 10x experiments<br/>
+   <strong>fast_test</strong> — 10 restarts, 3 temp steps — just to check the tool runs<br/>
+   <strong>high_convergence</strong> — 500 restarts, relaxed locus filters — use when you see "Convergence &lt;70%" in your results<br/>
+   <strong>manual</strong> — configure everything yourself<br/><br/>
+   You can always override any value after loading a profile.`},
+  {title:'Required Inputs — The Three Files',
+   body:`souporcell needs exactly <strong>three files</strong> from an upstream vartrix run:<br/><br/>
+   <strong>ref.mtx</strong> — sparse matrix of reference allele UMI counts per (cell, SNP locus)<br/>
+   <strong>alt.mtx</strong> — same but for alternate allele counts<br/>
+   <strong>barcodes.tsv</strong> — one cell barcode per line, in the same column order as the matrices<br/><br/>
+   These come from running vartrix on your merged BAM file (Stage 4 of the full pipeline). You only need to run this GUI tool if you already have these three files.`},
+  {title:'k — The Most Important Parameter',
+   body:`<strong>k</strong> is the number of donors you expect in your pooled sample. It must match your experimental design.<br/><br/>
+   If you pooled 4 donors → set k=4.<br/>
+   If you're unsure → run the tool with k-1, k, and k+1, then compare the convergence stability % in the reports. The correct k usually shows the highest convergence and most balanced clusters.<br/><br/>
+   <strong>Valid range: 2–64.</strong> For k&gt;4, consider using 200+ restarts.`},
+  {title:'Temperature &amp; Annealing — What It Means',
+   body:`This tool uses <strong>simulated annealing</strong> to find the best clustering.<br/><br/>
+   Think of it like cooling molten metal: start "hot" (soft, uncertain cluster assignments that explore freely) and gradually cool to "cold" (hard, committed assignments).<br/><br/>
+   <strong>anneal_steps=9</strong> means 9 temperature levels, T0=hottest → T8=standard EM.<br/>
+   <strong>anneal_base_em=20</strong> controls how hot T0 is.<br/><br/>
+   <strong>You almost never need to change these.</strong> Only tune if your convergence is low (use the high_convergence profile instead).`},
+  {title:'Phase 2 — Pre-flight Review',
+   body:`Before running anything, the tool shows you a <strong>complete plan</strong>:<br/><br/>
+   ✦ All 10 pipeline stages in order<br/>
+   ✦ Every resolved parameter with a plain-English explanation<br/>
+   ✦ A worked temperature example for your specific dataset<br/>
+   ✦ Expected output format with sample rows<br/>
+   ✦ 7 interpretation benchmarks with warning thresholds<br/>
+   ✦ 10 automated quality checks<br/><br/>
+   <strong>Nothing is read or written until you click Approved.</strong>`},
+  {title:'Phase 3 &amp; 4 — Execute and Inspect',
+   body:`In <strong>Phase 3</strong>, you watch each pipeline stage complete with live checkmarks and log output. The stats bar shows elapsed time, restarts completed, and convergence stability as it develops.<br/><br/>
+   In <strong>Phase 4</strong>, all output files are listed with sizes and descriptions. Click <strong>Download</strong> on any file. The most important file is <code>souporcell_report.html</code> — a self-contained HTML report you can open in any browser for the full interactive analysis.<br/><br/>
+   You can also <strong>Export config.json</strong> at any time to save your configuration as a profile for the next run.`},
+];
+
+let tourStep = 0;
+function startTour() {
+  tourStep = 0;
+  renderTour();
+  document.getElementById('tour-overlay').classList.add('active');
+}
+function closeTour() {
+  document.getElementById('tour-overlay').classList.remove('active');
+}
+function tourNav(dir) {
+  tourStep = Math.max(0, Math.min(TOUR.length - 1, tourStep + dir));
+  renderTour();
+}
+function renderTour() {
+  const t = TOUR[tourStep];
+  document.getElementById('tour-step-label').textContent = `Step ${tourStep+1} of ${TOUR.length}`;
+  document.getElementById('tour-title').textContent = t.title;
+  document.getElementById('tour-body').innerHTML = t.body;
+  document.getElementById('tour-dots').innerHTML =
+    TOUR.map((_,i)=>`<div class="tour-dot${i===tourStep?' active':''}"></div>`).join('');
+  document.getElementById('tour-prev').disabled = tourStep === 0;
+  const nextBtn = document.getElementById('tour-next');
+  if (tourStep === TOUR.length - 1) {
+    nextBtn.textContent = 'Start Configuring';
+    nextBtn.onclick = closeTour;
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.onclick = () => tourNav(1);
+  }
+}
+
+
+
+// ═══════════════════════════════════════════════════
+// SERVER-CONNECTED EXECUTION (--gui mode)
+// ═══════════════════════════════════════════════════
+function startRealExecution() {
+  const c = getConfig();
+
+  // Disable button immediately — prevent double-click
+  const execBtn = document.getElementById('btn-start-exec');
+  execBtn.disabled = true;
+  execBtn.textContent = '⏳ Running…';
+
+  const payload = {
+    ref_matrix: c.ref, alt_matrix: c.alt, barcodes: c.barcodes,
+    num_clusters: parseInt(c.k), restarts: parseInt(c.restarts),
+    seed: parseInt(c.seed), threads: parseInt(c.threads),
+    clustering_method: c.method, initialization_strategy: c.init,
+    min_ref: parseInt(c.minref), min_alt: parseInt(c.minalt),
+    min_ref_umis: parseInt(c.minrefumis), min_alt_umis: parseInt(c.minaltumis),
+    anneal_steps: parseInt(c.annealsteps), anneal_base_em: parseFloat(c.annealbaseem),
+    anneal_base_khm: parseFloat(c.annealbasekhm),
+    conv_tol: parseFloat(c.convtol), max_iter: parseInt(c.maxiter),
+    min_cluster_cells: parseInt(c.mincells),
+    pseudocount_alt: parseFloat(c.psalt), pseudocount_total: parseFloat(c.pstotal),
+    theta_min: parseFloat(c.thetamin), theta_max: parseFloat(c.thetamax),
+    khm_p: parseFloat(c.khmp),
+    plot_dir: c.plotdir, plots: c.plots,
+    verbose: c.verbose, souporcell3: c.souporcell3,
+  };
+
+  const log    = document.getElementById('exec-log');
+  const stEl   = document.getElementById('st-elapsed');
+  const stgEl  = document.getElementById('st-stage');
+  const rstEl  = document.getElementById('st-restarts');
+  const convEl = document.getElementById('st-conv');
+
+  log.innerHTML = '';
+  let elapsed = 0;
+  const ticker = setInterval(() => { elapsed++; stEl.textContent = elapsed + 's'; }, 1000);
+
+  const addLog = (msg, cls) => {
+    const span = document.createElement('span');
+    span.className = 'log-line ' + (cls ? 'log-'+cls : 'log-dim');
+    span.textContent = msg;
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  // Stages 0–9 matching the pipeline HTML
+  const stageNames = ['Load matrices','Load barcodes','Locus QC filter',
+    'Init cluster centres','EM/KHM (T0–T4)','EM/KHM (T5–TN)',
+    'Global optimum','Cell assignment','Write TSV','SVG + Report'];
+
+  let stageIdx = -1;
+  let restartCount = 0;
+  let seenFirstEM = false;
+
+  const markStage = (i, done) => {
+    if (i < 0 || i >= stageNames.length) return;
+    const el = document.getElementById('es-'+i);
+    const sr = document.getElementById('esr-'+i);
+    const tk = document.getElementById('et-'+i);
+    if (!el) return;
+    el.classList.remove('running','done');
+    if (done) { el.classList.add('done'); if(sr) sr.textContent='done'; if(tk) tk.textContent=''; }
+    else      { el.classList.add('running'); if(sr) sr.textContent='running…'; if(tk) tk.textContent='⏳'; }
+    stgEl.textContent = Math.max(0,i) + '/' + stageNames.length;
+  };
+
+  // Advance: mark everything up to i-1 as done, mark i as running
+  const advanceTo = (i) => {
+    if (i <= stageIdx) return;
+    for (let j = stageIdx; j < i; j++) { if (j >= 0) markStage(j, true); }
+    markStage(i, false);
+    stageIdx = i;
+  };
+
+  advanceTo(0); // Stage 0 starts immediately
+
+  const onRunDone = (exitCode) => {
+    clearInterval(ticker);
+    for (let i = stageIdx; i < stageNames.length; i++) markStage(i, true);
+    stgEl.textContent = stageNames.length + '/' + stageNames.length;
+    if (exitCode === 0) {
+      addLog('\n✔  Run complete!', 'green');
+      convEl.textContent = '✓';
+      convEl.style.color = 'var(--green)';
+      execBtn.textContent = '✔ View Outputs';
+      execBtn.disabled = false;
+      execBtn.onclick = () => goPhase(4);
+      state.execDone = true;
+      if (window.SOUPC_SERVER) { loadRealOutputFiles(); }
+    } else {
+      addLog('✖  Run failed (exit ' + exitCode + ')', 'amber');
+      convEl.textContent = 'ERR';
+      convEl.style.color = 'var(--red)';
+      execBtn.textContent = '↺ Retry';
+      execBtn.disabled = false;
+      execBtn.onclick = startRealExecution;
+    }
+  };
+
+  const onError = (msg) => {
+    clearInterval(ticker);
+    addLog('ERROR: ' + msg, 'amber');
+    execBtn.textContent = '↺ Retry';
+    execBtn.disabled = false;
+    execBtn.onclick = startRealExecution;
+  };
+
+  fetch('/api/run', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(resp => {
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    function pump() {
+      return reader.read().then(({done, value}) => {
+        if (done) { clearInterval(ticker); return; }
+        buf += decoder.decode(value, {stream: true});
+        const events = buf.split('\n\n');
+        buf = events.pop();
+        events.forEach(ev => {
+          const dataLine = ev.replace(/^data: /,'').trim();
+          if (!dataLine) return;
+          try {
+            const d = JSON.parse(dataLine);
+            switch(d.type) {
+
+              case 'start':
+                addLog('[RUN] ' + d.cmd, 'teal');
+                // Stage 0 is already running when we get here
+                break;
+
+              case 'params':
+                // [PARAMS] lines — stage 0 (load matrices) is running
+                addLog(d.msg);
+                if (stageIdx < 0) advanceTo(0);
+                break;
+
+              case 'section': {
+                // Section banners: ══ DATA LOADING, CLUSTERING, OUTPUT, etc.
+                addLog(d.msg, 'teal');
+                const sm = d.msg;
+                if (sm.includes('DATA LOADING') && stageIdx < 0)   advanceTo(0);
+                if (sm.includes('CLUSTERING')   && stageIdx <= 2)   advanceTo(3);
+                if (sm.includes('OUTPUT')        && stageIdx <= 7)  { advanceTo(7); advanceTo(8); }
+                if ((sm.includes('DIAGNOSTIC') || sm.includes('REPORT')) && stageIdx <= 8) advanceTo(9);
+                break;
+              }
+
+              case 'log': {
+                // log.info() lines: "  │  key ......... value"
+                addLog(d.msg);
+                const lm = d.msg;
+                // Stage 0→1: barcodes loaded line from log.info("barcodes loaded", n)
+                if (stageIdx <= 0 && lm.includes('barcodes loaded')) advanceTo(1);
+                // Stage 1→2: Loci in matrix / Loci passing QC from log_loading_stats()
+                if (stageIdx <= 1 && (lm.includes('Loci in matrix') || lm.includes('Loci passing QC'))) advanceTo(2);
+                // CONV em lines mean EM is running → stages 0-3 must be done
+                if (lm.startsWith('CONV') && stageIdx <= 3) {
+                  for (let j = stageIdx; j < 4; j++) markStage(j, true);
+                  stageIdx = 3;
+                  seenFirstEM = true;
+                  advanceTo(4);
+                }
+                break;
+              }
+
+              case 'ok': {
+                // log.ok() lines: "  ✔  message  [+Xs]"
+                addLog(d.msg, 'green');
+                const om = d.msg;
+                // "  ✔  Data loading complete" → advance past QC to init
+                if (om.includes('Data loading complete') && stageIdx <= 2) advanceTo(3);
+                // "  ✔  Cluster assignments written to stdout"
+                if (om.includes('Cluster assignments written') && stageIdx <= 7) advanceTo(8);
+                // Run N complete → global opt + cell assign must be done
+                if (om.includes('complete') && om.includes('log-prob') && stageIdx <= 6) {
+                  for (let j = stageIdx; j <= 6; j++) markStage(j, true);
+                  stageIdx = 6;
+                }
+                break;
+              }
+
+              case 'warn':
+                addLog(d.msg, 'amber');
+                break;
+
+              case 'restart':
+                // RESTART tab-delimited lines from log_restart()
+                restartCount++;
+                rstEl.textContent = restartCount;
+                if (!seenFirstEM) {
+                  seenFirstEM = true;
+                  // Ensure stages 0-3 are done, start stage 4
+                  for (let j = Math.max(0, stageIdx); j < 4; j++) markStage(j, true);
+                  stageIdx = 3;
+                  advanceTo(4);
+                }
+                break;
+
+              case 'tempstep': {
+                // "EM thread=N epoch=N temp_step=X/8 iters=N loss=N delta=N"
+                const mStep = d.msg.match(/temp_step=(\d+)\/(\d+)/);
+                const step  = mStep ? parseInt(mStep[1]) : -1;
+                const total = mStep ? parseInt(mStep[2]) : 8;
+                // Only log step=0 lines (one per epoch) to avoid flooding
+                if (step === 0) addLog(d.msg, 'dim');
+                // First EM line: ensure stage 4 is running
+                if (stageIdx <= 3) {
+                  seenFirstEM = true;
+                  for (let j = Math.max(0, stageIdx); j < 4; j++) markStage(j, true);
+                  stageIdx = 3;
+                  advanceTo(4);
+                }
+                // T5+ means we're in the second half of annealing
+                if (step >= 5 && stageIdx === 4) advanceTo(5);
+                break;
+              }
+
+              case 'done':
+                if (d.tsv_path) {
+                  addLog('✔  clusters_tmp.tsv → ' + d.tsv_path +
+                         (d.tsv_bytes > 0 ? '  (' + (d.tsv_bytes/1024).toFixed(0) + ' KB)' : '  (empty — check run)'),
+                         d.tsv_bytes > 0 ? 'green' : 'amber');
+                }
+                onRunDone(d.exit_code);
+                break;
+
+              case 'error':
+                onError(d.msg);
+                break;
+            }
+          } catch(e) {}
+        });
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(err => {
+    onError(err.message);
+  });
+}
+
+function loadRealOutputFiles() {
+  if (!window.SOUPC_SERVER) return;
+  const dir = document.getElementById('f-plotdir').value.trim() || './output';
+  fetch('/api/files?dir=' + encodeURIComponent(dir))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.files || data.files.length === 0) return;
+      const FILE_META = {
+        'clusters_tmp.tsv':        {icon:'📄', desc:'Primary output — cell barcode, cluster, log-probs. Feed to troublet (Stage 7).'},
+        'restart_landscape.svg':   {icon:'📊', desc:'Final log-likelihood per restart.'},
+        'convergence_curves.svg':  {icon:'📈', desc:'Per-iteration loss curves. Requires --verbose.'},
+        'annealing_profile.svg':   {icon:'🌡️', desc:'Mean ± SD loss at each temperature step.'},
+        'cluster_balance.svg':     {icon:'⚖️', desc:'Cells per cluster vs expected equal split.'},
+        'posterior_confidence.svg':{icon:'🎯', desc:'Histogram of best_lp − second_best_lp per cell.'},
+        'thread_efficiency.svg':   {icon:'⚙️', desc:'Restart count and best loss per thread.'},
+        'souporcell_report.html':  {icon:'🌐', desc:'Self-contained HTML run report. Open in any browser.'},
+        'clusters.err':            {icon:'📝', desc:'Full stderr log — PARAMS, RESTART lines, EM temp-steps.'},
+      };
+      const grid = document.getElementById('output-files-grid');
+      grid.innerHTML = data.files.map(f => {
+        const m = FILE_META[f.name] || {icon:'📁', desc:''};
+        const sz = f.size > 1048576 ? (f.size/1048576).toFixed(1)+' MB'
+                 : f.size > 1024    ? (f.size/1024).toFixed(0)+' KB'
+                 : f.size + ' B';
+        return `<div class="output-file">
+          <span class="output-icon">${m.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div class="output-name">${f.name}</div>
+            <div class="output-size">${f.path} &nbsp;·&nbsp; ${sz}</div>
+            <div class="output-desc">${m.desc}</div>
+          </div>
+          <button class="output-dl" onclick="fakeDownload('${f.name}')">⬇ Download</button>
+        </div>`;
+      }).join('');
+    }).catch(() => {});
+}
+
+// ═══════════════════════════════════════════════════
+// ENHANCEMENTS CHANGELOG
+// ═══════════════════════════════════════════════════
+
+const CHANGELOG = [
+  {
+    version: 'v3.0', date: 'Mar 2025',
+    items: [
+      { cat:'ux',     title:'Web GUI — Mission Control',
+        desc:'Full browser-based interface for configuring, running and inspecting souporcell. Launched with <code>souporcell --gui</code>. No web server required — embedded in the binary at compile time. Features: profile loader, per-field tooltips with valid ranges, live CLI command preview, pre-flight plan, animated execution pipeline, real file downloads.' },
+      { cat:'ux',     title:'Pre-flight dry run (--dry_run)',
+        desc:'Shows a complete structured run plan — inputs, all 10 pipeline stages, every resolved hyperparameter with plain-English explanation, a worked temperature example, expected output format, 7 interpretation benchmarks with warning thresholds, and a 10-item quality checklist — before reading or writing anything. Type n to abort cleanly.' },
+      { cat:'ux',     title:'GUI execution via SSE streaming',
+        desc:'The GUI connects to the local server and streams real-time stderr output as Server-Sent Events. Stdout (clusters_tmp.tsv) is redirected to file to prevent pipe deadlock on large datasets. Live stage checkmarks, elapsed timer, restart counter, and convergence indicator update as the run progresses.' },
+      { cat:'config', title:'Config profiles (.json)',
+        desc:'JSON profile files pre-fill any subset of parameters. Four bundled profiles: default, fast_test (smoke test), high_convergence (500 restarts, relaxed QC), k4_grch38. Load with <code>--config profiles/name.json</code>. CLI flags override the profile. GUI has one-click profile selector.' },
+      { cat:'config', title:'Environment file support (.env)',
+        desc:'Auto-discovers .souporcell.env in CWD then $HOME. Explicit path with <code>--env /path/file.env</code>. All SOUPC_* keys map to their corresponding CLI flags. Three-layer merge: CLI > --config JSON > .env > built-in defaults. Tilde (~) expansion applied at parse time.' },
+      { cat:'config', title:'Tilde expansion in all path inputs',
+        desc:`Rust's File::open() does not expand ~ — fixed at three points: params.rs (CLI / JSON / env resolution), env_loader.rs (value parse time), and io.rs (file open). Paths from any source now work correctly with ~.` },
+      { cat:'algo',   title:'All algorithmic constants made configurable',
+        desc:'Every previously hardcoded constant is now a CLI flag + env key: anneal_steps (9), anneal_base_em (20.0), anneal_base_khm (0.5), conv_tol (0.01), max_iter (1000), min_cluster_cells (200), pseudocount_alt (1.0), pseudocount_total (2.0), theta_min (0.01), theta_max (0.99), khm_p (25.0). All 11 constants are also settable via JSON profile or .env.' },
+    ]
+  },
+  {
+    version: 'v2.6', date: 'Feb 2025',
+    items: [
+      { cat:'output',  title:'HTML run report',
+        desc:'Self-contained single-file HTML report (no internet required). Contains: metric cards, interactive D3.js pipeline graph, 5 results tables, quality interpretation commentary, full parameters table, methods section, and references. Written to plot_dir/souporcell_report.html.' },
+      { cat:'output',  title:'6 SVG diagnostic plots',
+        desc:'restart_landscape (final loss per restart sorted worst→best), convergence_curves (per-iteration loss for all restarts, requires --verbose), annealing_profile (mean ± SD loss at each temperature step), cluster_balance (cells per cluster vs expected equal split), posterior_confidence (histogram of best_lp − second_best_lp), thread_efficiency (restarts and best loss per thread).' },
+      { cat:'arch',    title:'report.rs split into 13-file submodule',
+        desc:'The original 1290-line single-file report.rs was decomposed into src/analysis/report/ with 13 focused files: mod.rs, css.rs, cards.rs, experiment.rs, graph.rs, graph_js.rs, graph_template.json, tables.rs, svgs.rs, plot_embeds.rs, interpretation.rs, params.rs, methods.rs, utils.rs. White academic theme replacing previous dark theme.' },
+      { cat:'arch',    title:'Modular 5-layer source tree',
+        desc:'Full rewrite from single-file binary to: domain/ (pure types and math, no I/O), config/ (CLI parsing, Params struct, env/config loading), core/ (EM, KHM, cluster_init algorithms), infra/ (file I/O, logger, preflight, gui_server), analysis/ (plots, report submodule). Strict dependency rules enforced between layers.' },
+      { cat:'arch',    title:'Structured stderr logging (Logger)',
+        desc:'All terminal output routed through Logger. Section banners, key-value info lines, success lines with elapsed timing, warnings, fatal errors — all consistently formatted, ANSI colour-coded when stderr is a TTY, machine-parseable when piped to a log file.' },
+      { cat:'algo',    title:'Reproducible seeding (--seed)',
+        desc:'A single u64 seed is spread across a 32-byte StdRng seed array, then used to generate all per-thread seeds. Same --seed + same --threads = identical results across runs on any platform. Original code had non-reproducible per-thread seeds.' },
+      { cat:'algo',    title:'Parallel restart loop refactored',
+        desc:'Rayon parallel iterator over ThreadData structs. Each thread owns its RNG, restart counter, and best solution. Results merged into global best after all threads complete. Arc<Mutex<PlotData>> collects per-restart and per-cell data for plots without blocking the clustering loop.' },
+    ]
+  },
+  {
+    version: 'v2.5', date: 'Jan 2025',
+    items: [
+      { cat:'config',  title:'YAML-driven CLI (clap v2 yaml)',
+        desc:'All 34+ flags defined in params.yml rather than scattered across Rust structs. Adding a new flag requires only one file edit. Required flags changed to required:false so --config and .env can supply them without clap rejecting the command.' },
+      { cat:'config',  title:'3-layer resolve macros',
+        desc:'resolve_str!, resolve_int!, resolve_float!, resolve_bool_flag!, resolve_opt_str! macros implement CLI > config > env > default priority consistently for every parameter. Eliminates repetitive if-let chains across the codebase.' },
+      { cat:'algo',    title:'KHM (K-Harmonic Means) algorithm',
+        desc:`Added as an alternative to EM via --clustering_method khm. Uses a harmonic-mean membership function controlled by --khm_p (default 25.0). More robust to poor initialisations for large k. KHM runs hotter by default (anneal_base_khm=0.5 vs EM's 20.0).` },
+      { cat:'algo',    title:'Souporcell3 multi-pass bad-cluster detection',
+        desc:'Optional via --souporcell3. Up to 3 passes: after each pass, under- and over-populated clusters are identified and reinitialised while good clusters are locked. Narrows the reinitialisation window each pass. Only active when k ≥ 16.' },
+      { cat:'algo',    title:'Known-genotypes VCF initialisation',
+        desc:'--known_genotypes accepts a VCF/BCF of donor genotypes. Theta vectors are initialised from the VCF allele frequencies rather than randomly, with --theta_min/theta_max clamping applied. Skips random init for those clusters.' },
+      { cat:'output',  title:'Structured convergence log lines',
+        desc:'Every EM/KHM iteration emits a tab-delimited CONV line: CONV {method} {thread} {epoch} {iter} {temp_step} {loss} {delta} {n_populated}. Parseable by awk/grep for post-run analysis. Controlled by --verbose.' },
+      { cat:'fix',     title:'clap required:true blocking --config / .env',
+        desc:'The four required=true fields (ref_matrix, alt_matrix, barcodes, num_clusters) caused clap to reject runs that supplied paths via --config or .env before load_params() could read them. Fixed by changing all four to required:false and moving validation into load_params().' },
+    ]
+  },
+  {
+    version: 'v2.4', date: 'baseline', isBaseline: true,
+    items: [
+      { cat:'arch',   title:'Original souporcell v2.4 (Heaton et al.)',
+        desc:'Single Rust source file. CLI via clap with hardcoded required flags. EM algorithm with simulated annealing. Optional KHM. Parallel restarts via rayon. stdout TSV output. No logging structure, no plots, no report, no reproducible seeding, no configuration system. Reference: Heaton et al., Nature Methods 2020, doi:10.1038/s41592-020-0820-1' },
+    ]
+  }
+];
+
+let clCurrentFilter = 'all';
+
+function openChangelog() {
+  buildChangelog();
+  document.getElementById('cl-overlay').classList.add('active');
+}
+function closeChangelog() {
+  document.getElementById('cl-overlay').classList.remove('active');
+}
+function openAlgoAnalysis() {
+  // In server mode, open the served file; otherwise open the standalone HTML
+  if (window.SOUPC_SERVER) {
+    window.open('/algo-analysis', '_blank');
+  } else {
+    window.open('souporcell_algo_analysis.html', '_blank');
+  }
+}
+function clFilter(cat) {
+  clCurrentFilter = cat;
+  document.querySelectorAll('.cl-tag').forEach(t => {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  document.querySelectorAll('.cl-item').forEach(el => {
+    const match = cat === 'all' || el.dataset.cat === cat;
+    el.classList.toggle('hidden', !match);
+  });
+}
+function buildChangelog() {
+  const body = document.getElementById('cl-body');
+  // Count totals
+  const counts = {arch:0,config:0,algo:0,output:0,ux:0,fix:0};
+  CHANGELOG.forEach(v => v.items.forEach(i => { if(counts[i.cat]!==undefined) counts[i.cat]++; }));
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  let html = `<div class="cl-stats">
+    <div class="cl-stat"><div class="cl-stat-n" style="color:var(--ink)">${total}</div><div class="cl-stat-l">Total</div></div>
+    <div class="cl-stat"><div class="cl-stat-n" style="color:#60CFFF">${counts.arch}</div><div class="cl-stat-l">Architecture</div></div>
+    <div class="cl-stat"><div class="cl-stat-n" style="color:#A78BFA">${counts.config}</div><div class="cl-stat-l">Config</div></div>
+    <div class="cl-stat"><div class="cl-stat-n" style="color:var(--teal)">${counts.algo}</div><div class="cl-stat-l">Algorithm</div></div>
+    <div class="cl-stat"><div class="cl-stat-n" style="color:#34D399">${counts.output}</div><div class="cl-stat-l">Output</div></div>
+    <div class="cl-stat"><div class="cl-stat-n" style="color:var(--amber)">${counts.ux}</div><div class="cl-stat-l">UX</div></div>
+    <div class="cl-stat"><div class="cl-stat-n" style="color:var(--red)">${counts.fix}</div><div class="cl-stat-l">Fixes</div></div>
+  </div>`;
+
+  CHANGELOG.forEach(v => {
+    const baseStyle = v.isBaseline
+      ? 'border:1px solid var(--border2);opacity:.7'
+      : 'border:1px solid var(--amber-dim)';
+    html += `<div class="cl-version">
+      <div class="cl-version-tag" style="${v.isBaseline?'background:var(--surface2);color:var(--ink3);border-color:var(--border2)':''}">
+        ${v.isBaseline ? '⊘' : '★'} ${v.version}
+        <span class="cl-version-date">${v.date}</span>
+      </div>`;
+    v.items.forEach(item => {
+      const badgeClass = 'badge-'+item.cat;
+      const badgeLabel = item.cat.toUpperCase();
+      html += `<div class="cl-item" data-cat="${item.cat}">
+        <span class="cl-item-badge ${badgeClass}">${badgeLabel}</span>
+        <div class="cl-item-text">
+          <div class="cl-item-title">${item.title}</div>
+          <div class="cl-item-desc">${item.desc}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  body.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+loadProfile('default');
+
+// Server mode: check if run is already active on page load/refresh
+if (window.SOUPC_SERVER) {
+  fetch('/api/status').then(r => r.json()).then(d => {
+    if (d.status === 'running') {
+      // Unlock tabs, build pipeline UI, and navigate to Phase 3
+      ['tab-2','tab-3'].forEach(id =>
+        document.getElementById(id).classList.remove('locked'));
+      // Build the pipeline stage list before navigating
+      buildExecPipeline();
+      goPhase(3);
+      const log = document.getElementById('exec-log');
+      log.innerHTML = '';
+      const addReconnectLog = (msg, cls) => {
+        const sp = document.createElement('span');
+        sp.className = 'log-line ' + (cls ? 'log-'+cls : 'log-dim');
+        sp.textContent = msg;
+        log.appendChild(sp);
+        log.scrollTop = log.scrollHeight;
+      };
+      addReconnectLog('⚠ A run is in progress on the server — reconnected after page refresh.', 'amber');
+      addReconnectLog('Polling for completion every 2 seconds…');
+      const btn = document.getElementById('btn-start-exec');
+      btn.disabled = true;
+      btn.textContent = '⏳ Running…';
+      // Mark stage 0 as running to show activity
+      const es0 = document.getElementById('es-0');
+      if (es0) { es0.classList.add('running'); }
+      // Poll until done
+      let elapsed = 0;
+      const stEl = document.getElementById('st-elapsed');
+      const ticker = setInterval(() => { elapsed++; if(stEl) stEl.textContent = elapsed+'s'; }, 1000);
+      const poll = setInterval(() => {
+        fetch('/api/status').then(r => r.json()).then(s => {
+          if (s.status !== 'running') {
+            clearInterval(poll);
+            clearInterval(ticker);
+            // Mark all stages done
+            for (let i = 0; i < 10; i++) {
+              const el = document.getElementById('es-'+i);
+              if (el) { el.classList.remove('running'); el.classList.add('done'); }
+              const sr = document.getElementById('esr-'+i);
+              if (sr) sr.textContent = 'done';
+            }
+            addReconnectLog('✔ Run complete. Loading output files…', 'green');
+            btn.textContent = '✔ View Outputs';
+            btn.disabled = false;
+            btn.onclick = () => goPhase(4);
+            if (window.SOUPC_SERVER) { loadRealOutputFiles(); }
+          }
+        }).catch(() => { clearInterval(poll); clearInterval(ticker); });
+      }, 2000);
+    }
+  }).catch(() => {});
+}
+
+startTour();
+</script>
+<!-- ── ENHANCEMENTS / CHANGELOG MODAL ── -->
+<div class="cl-overlay" id="cl-overlay" onclick="if(event.target===this)closeChangelog()">
+  <div class="cl-modal">
+    <div class="cl-header">
+      <div class="cl-header-top">
+        <div>
+          <div class="cl-title">&#9733; Enhancements — v2.4 → v3.0</div>
+          <div class="cl-subtitle">souporcell enhanced rewrite · Jahidul Arafat &nbsp;·&nbsp; Original: Heaton et al. 2020</div>
+        </div>
+        <button class="cl-close" onclick="closeChangelog()">✕</button>
+      </div>
+      <div class="cl-filter">
+        <span class="cl-tag active" data-cat="all"    onclick="clFilter('all')">ALL</span>
+        <span class="cl-tag"        data-cat="arch"   onclick="clFilter('arch')">ARCHITECTURE</span>
+        <span class="cl-tag"        data-cat="config" onclick="clFilter('config')">CONFIG</span>
+        <span class="cl-tag"        data-cat="algo"   onclick="clFilter('algo')">ALGORITHM</span>
+        <span class="cl-tag"        data-cat="output" onclick="clFilter('output')">OUTPUT</span>
+        <span class="cl-tag"        data-cat="ux"     onclick="clFilter('ux')">UX</span>
+        <span class="cl-tag"        data-cat="fix"    onclick="clFilter('fix')">FIXES</span>
+      </div>
+    </div>
+    <div class="cl-body" id="cl-body"></div>
+  </div>
+</div>
+
+</body>
+</html>

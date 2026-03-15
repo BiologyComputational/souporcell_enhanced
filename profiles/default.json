@@ -1,0 +1,32 @@
+{
+  "profile": "default",
+  "description": "Default souporcell settings \u2014 suitable starting point for most 10x runs",
+  "params": {
+    "num_clusters": 4,
+    "restarts": 100,
+    "seed": 42,
+    "threads": 4,
+    "clustering_method": "em",
+    "initialization_strategy": "random_uniform",
+    "souporcell3": false,
+    "min_alt": 4,
+    "min_ref": 4,
+    "min_alt_umis": 0,
+    "min_ref_umis": 0,
+    "verbose": false,
+    "progress_interval": 500,
+    "plots": "all",
+    "cleanup": false,
+    "anneal_steps": 9,
+    "anneal_base_em": 20.0,
+    "anneal_base_khm": 0.5,
+    "conv_tol": 0.01,
+    "max_iter": 1000,
+    "min_cluster_cells": 200,
+    "pseudocount_alt": 1.0,
+    "pseudocount_total": 2.0,
+    "theta_min": 0.01,
+    "theta_max": 0.99,
+    "khm_p": 25.0
+  }
+}

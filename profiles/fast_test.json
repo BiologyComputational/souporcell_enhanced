@@ -1,0 +1,31 @@
+{
+  "profile": "fast_test",
+  "description": "Fast smoke-test \u2014 low restarts, single thread. Not for production results.",
+  "params": {
+    "restarts": 10,
+    "seed": 1,
+    "threads": 1,
+    "clustering_method": "em",
+    "initialization_strategy": "random_uniform",
+    "souporcell3": false,
+    "min_alt": 4,
+    "min_ref": 4,
+    "min_alt_umis": 0,
+    "min_ref_umis": 0,
+    "verbose": true,
+    "progress_interval": 200,
+    "plots": "none",
+    "cleanup": false,
+    "anneal_steps": 3,
+    "anneal_base_em": 20.0,
+    "anneal_base_khm": 0.5,
+    "conv_tol": 0.05,
+    "max_iter": 100,
+    "min_cluster_cells": 50,
+    "pseudocount_alt": 1.0,
+    "pseudocount_total": 2.0,
+    "theta_min": 0.01,
+    "theta_max": 0.99,
+    "khm_p": 25.0
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "nodes": [
+    {
+      "id":"cli","seq":1,"name":"CLI parser","cat":"io","r":20,"timing":"","phase":"Init",
+      "details":[["Module","params.rs"],["k","{{K}}"],["Restarts","{{RESTARTS}}"],["Threads","{{THREADS}}"],["Seed","{{SEED}}"],["Method","{{METHOD}}"],["Init strategy","{{INIT}}"]],
+      "subs":["Load clap YAML spec","Parse argv","Validate k >= 2","Validate threads >= 1","Expand seed u8 to u64","Build Params struct"],
+      "checks":[["All required flags present",true],["k >= 2",true],["seed u64 entropy",true],["threads >= 1",true]],
+      "desc":"Entry point. Parses every CLI flag through clap YAML. Promotes seed from u8 (256 values) to u64 spread across a 32-byte StdRng array for full entropy. Validates all required paths exist."
+    },
+    {
+      "id":"load","seq":2,"name":"Matrix loader","cat":"io","r":26,"timing":"{{LOAD_MS}}ms","phase":"Init",
+      "details":[["Module","io.rs"],["Barcodes","{{N_CELLS}}"],["Loci raw","{{N_LOCI_RAW}}"],["Loci after QC","{{N_LOCI_USED}}"],["Sparsity","{{ZERO_PCT}}%"],["Time","{{LOAD_MS}}ms"]],
+      "subs":["Open ref.mtx (.gz transparent)","Open alt.mtx (.gz transparent)","Read barcodes.tsv","Parse MatrixMarket header","Build CellData structs","Compute sparsity metric"],
+      "checks":[["ref.mtx readable",true],["alt.mtx readable",true],["barcodes loaded",true],["Sparsity > 90%",true],["Matrix dims agree",true]],
+      "desc":"Reads MatrixMarket sparse matrices (.gz transparent). Builds per-cell ref/alt allele count vectors. {{ZERO_PCT}}% sparsity is expected -- most cells have no reads at any given SNP locus."
+    },
+    {
+      "id":"qc","seq":3,"name":"Locus QC filter","cat":"qc","r":20,"timing":"","phase":"Init",
+      "details":[["Loci raw","{{N_LOCI_RAW}}"],["Loci passing","{{N_LOCI_USED}}"],["Filtered","{{LOCI_FILTERED}} ({{FILTER_PCT}}%)"],["min_ref","{{MIN_REF}}"],["min_alt","{{MIN_ALT}}"],["Module","io.rs: load_cell_data()"]],
+      "subs":["Count ref-allele cells per locus","Count alt-allele cells per locus","Apply min_ref threshold","Apply min_alt threshold","Apply min UMI thresholds","Build locus-to-index map"],
+      "checks":[["Loci remaining > 100",true],["Filter rate < 99%",true],["min_ref applied",true],["min_alt applied",true],["Locus index built",true]],
+      "desc":"Removes uninformative SNP loci. A locus passes only when >= min_ref cells carry the reference allele AND >= min_alt carry the alternate. Rejects monomorphic sites and low-coverage noise positions."
+    },
+    {
+      "id":"init","seq":4,"name":"Cluster initialiser","cat":"compute","r":20,"timing":"","phase":"Clustering",
+      "details":[["Module","cluster_init.rs"],["Strategy","{{INIT}}"],["Theta dims","{{K}} x {{N_LOCI_USED}}"],["k","{{K}}"],["Per-restart seed","det. from u64 master"]],
+      "subs":["Create k theta vectors","Draw theta_ij from Uniform(0,1)","Derive per-restart seeds from master","Lock good centres (souporcell3 mode)","Return (centres, locked[])"],
+      "checks":[["k centres created",true],["theta in [0,1]",true],["Loci dim matches",true],["Seeds deterministic",true]],
+      "desc":"Initialises k donor allele-frequency profiles (theta, dim = k x loci). random_uniform draws each theta_kj from Uniform(0,1). Every restart gets a deterministic seed from the master for full reproducibility."
+    },
+    {
+      "id":"threads","seq":5,"name":"Thread pool","cat":"compute","r":20,"timing":"","phase":"Clustering",
+      "details":[["Framework","rayon par_iter_mut"],["Threads","{{THREADS}}"],["Restarts per thread","{{RPT}}"],["PlotData sync","Arc<Mutex<PlotData>>"],["RNG isolation","per-thread StdRng"]],
+      "subs":["Build ThreadData per thread","Assign ceil(R/T) restarts each","Spawn rayon par_iter_mut","Isolate StdRng per thread","Share PlotData via Arc<Mutex>","Join and merge results"],
+      "checks":[["Threads <= CPU cores",true],["Isolated RNG per thread",true],["No data races",true],["Results merged after join",true]],
+      "desc":"Rayon parallel iterator distributes {{RESTARTS}} restarts across {{THREADS}} threads ({{RPT}} each). Each thread owns its RNG and best-solution state. PlotData locked once per restart, not per EM iteration."
+    },
+    {
+      "id":"anneal","seq":6,"name":"Annealing schedule","cat":"algo","r":18,"timing":"","phase":"Clustering",
+      "details":[["T steps","9"],["T range","10 to 1 (geometric)"],["Records collected","{{N_TS}}"],["Purpose","Escape local optima"],["Final T","1.0 (exact EM)"]],
+      "subs":["Define T = [10,7.5,5.6,4.2,3.2,2.4,1.8,1.3,1.0]","Scale log-likelihoods by 1/T","Run E-step at each T","Check delta-loss convergence","Advance to next T step","Final step: T=1 (exact EM)"],
+      "checks":[["9 T-steps defined",true],["T monotonically decreasing",true],["Final T = 1",true],["Convergence checked each step",true]],
+      "desc":"Geometric temperature schedule. High T (=10) flattens the E-step posterior so cluster centres can cross local-optima barriers. Each step iterates until delta-loss < threshold or the iteration cap is hit."
+    },
+    {
+      "id":"em","seq":7,"name":"EM / KHM core","cat":"algo","r":34,"timing":"{{CLUST_MS}}ms","phase":"Clustering",
+      "details":[["Algorithm","{{METHOD}}"],["Restarts run","{{RESTARTS}}"],["At global optimum","{{AT_BEST}}/{{RESTARTS}} ({{CONV_QUALITY}}%)"],["Best log-prob","{{BEST_LP}}"],["Convergence","delta-loss < 0.01 x n_cells"],["T steps","9"],["Time","{{CLUST_MS}}ms"]],
+      "subs":["E-step: compute log p(cell|cluster) per T","Softmax posteriors with temperature","M-step: update theta via weighted freq","Check delta-loss < 0.01 x n_cells","Record temp-step loss to PlotData","Repeat across 9 T-steps","Store best log-prob per thread"],
+      "checks":[["E-step posteriors sum to 1",true],["theta in [0,1] after M-step",true],["Loss non-decreasing",true],["{{CONV_QUALITY}}% restarts at optimum",true],["Best log-prob finite",true]],
+      "desc":"Core clustering. E-step: log p(cell_i | cluster_k) under binomial allele model; softmax gives posteriors. M-step: theta_kj = sum(w*alt) / sum(w*depth). {{AT_BEST}}/{{RESTARTS}} restarts converged to the same global optimum."
+    },
+    {
+      "id":"merge","seq":8,"name":"Best-solution merge","cat":"compute","r":20,"timing":"","phase":"Post-clustering",
+      "details":[["Criterion","argmax log-probability"],["Candidates","{{RESTARTS}}"],["Winner log-prob","{{BEST_LP}}"],["Stability","{{CONV_QUALITY}}% at optimum"],["Module","main.rs: run_clustering()"]],
+      "subs":["Compare best_lp across threads","Select argmax thread","Extract best log-prob matrix","Unwrap Arc<Mutex<PlotData>>","Record global_best to PlotData","Return (best_log_probs, plot_data)"],
+      "checks":[["Single best selected",true],["Log-prob is finite",true],["Cell matrix: n_cells x k",true],["Stability >= 50%",true],["Stability >= 70% (strong target)",true]],
+      "desc":"After all rayon threads complete, selects the global argmax log-probability solution. Arc is unwrapped to extract PlotData. {{CONV_QUALITY}}% stability confirms a well-defined global optimum."
+    },
+    {
+      "id":"assign","seq":9,"name":"Cell assignment","cat":"output","r":24,"timing":"","phase":"Post-clustering",
+      "details":[["Cells assigned","{{N_CELLS}}"],["k","{{K}}"],["Max imbalance","{{MAX_IMBALANCE}}%"],["Output","clusters_tmp.tsv"],["Format","barcode  cluster  log-probs..."],["Module","io.rs"]],
+      "subs":["argmax over k log-probs per cell","Assign cluster index 0..k-1","Validate no empty cluster","Compute cells_per_cluster[]","Write TSV rows to stdout","Log cluster balance to stderr"],
+      "checks":[["All cells assigned",true],["Cluster indices in [0,k-1]",true],["No cluster empty",true],["Max imbalance < 50%",true],["k log-probs written per row",true]],
+      "desc":"argmax over each cell log-probability vector assigns the most likely donor. All k log-probabilities are written per row for downstream troublet doublet detection. Max cluster imbalance: {{MAX_IMBALANCE}}%."
+    },
+    {
+      "id":"plots","seq":10,"name":"Diagnostic plots","cat":"output","r":20,"timing":"","phase":"Post-clustering",
+      "details":[["Module","plots.rs"],["SVGs written","{{N_PLOTS}}"],["Format","self-contained SVG"],["Dependencies","none (pure Rust)"],["PlotData overhead","1 lock / restart"]],
+      "subs":["Parse PlotFlags from --plots arg","Write restart_landscape.svg","Write convergence_curves.svg (verbose)","Write annealing_profile.svg","Write cluster_balance.svg","Write posterior_confidence.svg","Write thread_efficiency.svg"],
+      "checks":[["restart_landscape.svg",true],["cluster_balance.svg",true],["posterior_confidence.svg",true],["thread_efficiency.svg",true],["annealing_profile.svg",true],["convergence_curves.svg (verbose)",true]],
+      "desc":"Six SVG diagnostic plots from data accumulated during clustering. PlotData is locked once per restart (not per EM iteration). convergence_curves.svg requires --verbose mode."
+    },
+    {
+      "id":"report","seq":11,"name":"HTML report","cat":"output","r":18,"timing":"{{TOTAL_MS}}ms","phase":"Post-clustering",
+      "details":[["Module","report.rs"],["Format","self-contained HTML"],["D3.js","7.8.5 (CDN)"],["Inline SVGs","2"],["Embedded plots","{{N_PLOTS}}"],["Checklist items","10"]],
+      "subs":["Build ReportData struct","Call build_graph_json (template + replace)","Build inline balance SVG","Build inline confidence histogram","Embed SVG plot file paths","Build PhD interpretation guide","Build params table","Write souporcell_report.html"],
+      "checks":[["HTML written",true],["D3 graph renders",true],["All SVGs embedded",true],["Param table complete",true],["Interpretation guide present",true]],
+      "desc":"This document. Generated last, after all outputs are written. Uses include_str!(graph_template.json) + .replace() to avoid Rust 2021 format! issues. Contains D3 force graph, inline SVGs, interpretation guide, full params table."
+    }
+  ],
+  "links": [
+    {"s":"cli",    "t":"load",   "type":"trigger","lbl":"params",       "ord":1,  "weight":2,  "distance":130},
+    {"s":"load",   "t":"qc",    "type":"data",   "lbl":"raw loci",     "ord":2,  "weight":2,  "distance":100},
+    {"s":"qc",     "t":"init",  "type":"data",   "lbl":"filtered loci","ord":3,  "weight":2,  "distance":110},
+    {"s":"cli",    "t":"init",  "type":"trigger","lbl":"k seed",       "ord":4,  "weight":1,  "distance":160},
+    {"s":"init",   "t":"em",    "type":"data",   "lbl":"theta0",       "ord":5,  "weight":2,  "distance":120},
+    {"s":"threads","t":"em",    "type":"trigger","lbl":"rayon",        "ord":6,  "weight":2,  "distance":100},
+    {"s":"anneal", "t":"em",    "type":"trigger","lbl":"T schedule",   "ord":7,  "weight":1.5,"distance":100},
+    {"s":"em",     "t":"merge", "type":"result", "lbl":"log-probs",    "ord":8,  "weight":2,  "distance":110},
+    {"s":"merge",  "t":"assign","type":"data",   "lbl":"best matrix",  "ord":9,  "weight":2,  "distance":110},
+    {"s":"load",   "t":"assign","type":"data",   "lbl":"barcodes",     "ord":10, "weight":1.5,"distance":160},
+    {"s":"assign", "t":"plots", "type":"data",   "lbl":"PlotData",     "ord":11, "weight":1.5,"distance":110},
+    {"s":"assign", "t":"report","type":"data",   "lbl":"metrics",      "ord":12, "weight":1.5,"distance":130},
+    {"s":"plots",  "t":"report","type":"data",   "lbl":"SVG paths",    "ord":13, "weight":1.5,"distance":100}
+  ]
+}

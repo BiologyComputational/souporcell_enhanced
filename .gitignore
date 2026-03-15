@@ -1,0 +1,46 @@
+# Rust / Cargo
+target/
+**/*.rs.bk
+
+# Environment / secrets
+.souporcell.env
+*.env
+.env.*
+
+# Bioinformatics output files
+*.bam
+*.bai
+*.vcf
+*.vcf.gz
+*.tbi
+*.bcf
+*.cram
+*.crai
+*.bed
+*.bigwig
+*.bw
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.sam
+
+# Pipeline run outputs
+results/
+output/
+logs/
+*.log
+*.tmp
+tmp/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

@@ -1,0 +1,16 @@
+[package]
+name        = "souporcell"
+version     = "3.0.0"
+authors     = ["wheaton5 <whheaton@gmail.com>", "Jahidul Arafat <jarotball@gmail.com>"]
+edition     = "2021"
+description = "scRNA-seq mixed-genotype demultiplexing — enhanced modular rewrite"
+
+[dependencies]
+clap        = { version = "~2.27.0", features = ["yaml"] }
+hashbrown   = "0.1"
+rand        = "0.7.0"
+itertools   = "*"
+statrs      = "*"
+rayon       = "*"
+vcf         = "0.1.0"
+flate2      = "*"
